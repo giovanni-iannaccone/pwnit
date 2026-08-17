@@ -9,6 +9,7 @@ namespace pwnit::start
 
     void write_solve(commands::StartOptions &opt);
 
+    std::string patchelf(const commands::StartOptions &opt);
     void start(commands::StartOptions &opt);
 
 }

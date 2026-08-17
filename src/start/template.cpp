@@ -21,9 +21,9 @@ constexpr auto ld = "ld = ELF(\"{}\", checksec=False)";
 static inline
 std::string ask_solve_file()
 {
-    std::string solve;
-    
     console::log("Solve already exists, press enter to overwrite it or new filename: ");
+    
+    std::string solve;
     std::getline(std::cin, solve);
     return solve;
 }

@@ -14,15 +14,6 @@ enum class FileType
     LOADER,
 };
 
-static bool filename_contains(
-    const std::filesystem::path& path,
-    std::string_view pattern)
-{
-    const auto filename = path.filename().string();
-
-    return filename.find(pattern) != std::string::npos;
-}
-
 static FileType classify(const std::filesystem::path& filepath)
 {
     elf::Elf e {filepath, elf::DONT_DIE_ON_ERR};

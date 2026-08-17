@@ -5,7 +5,6 @@
 namespace pwnit::download
 {
 
-std::string libc(libc::Libc libc);
-std::string loader(libc::Libc libc);
+std::string from_libc_db(libc::Libc libc);
 
 }
