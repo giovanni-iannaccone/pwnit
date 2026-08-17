@@ -14,53 +14,69 @@ enum class FileType
     LOADER,
 };
 
-static FileType classify(const std::filesystem::path &filepath)
+static bool filename_contains(
+    const std::filesystem::path& path,
+    std::string_view pattern)
+{
+    const auto filename = path.filename().string();
+
+    return filename.find(pattern) != std::string::npos;
+}
+
+static FileType classify(const std::filesystem::path& filepath)
 {
     elf::Elf e {filepath, elf::DONT_DIE_ON_ERR};
-    
+
     if (!e.valid)
         return FileType::NOT_ELF;
-    
-    if (e.is_libc())
+
+    const auto filename = filepath.filename().string();
+
+    if (filename.find("libc") != std::string::npos)
         return FileType::LIBC;
-    
-    if (e.is_loader())
+
+    if (filename.find("ld-") != std::string::npos)
         return FileType::LOADER;
-    
+
     return FileType::ELF;
 }
 
-void find_binaries(commands::StartOptions &opt)
+void find_binaries(commands::StartOptions& opt)
 {
     for (const auto& entry :
-             std::filesystem::directory_iterator(std::filesystem::current_path())) {
-        
-        if (entry.is_regular_file()) {
-            switch (classify(entry.path())) {
-            case FileType::ELF:
-                if (opt.elf.empty())
-                    opt.elf = entry.path();
-                break;
-                
-            case FileType::LIBC:
-                if (opt.libc.empty())
-                    opt.libc = entry.path();
-                break;
-                
-            case FileType::LOADER:
-                if (opt.ld.empty())
-                    opt.ld = entry.path();
-                break;
-                
-            default: ;
-            }
+         std::filesystem::directory_iterator(
+             std::filesystem::current_path())) {
+
+        if (!entry.is_regular_file())
+            continue;
+
+        const auto path = entry.path();
+
+        switch (classify(path)) {
+        case FileType::ELF:
+            if (opt.elf.empty())
+                opt.elf = path;
+            break;
+
+        case FileType::LIBC:
+            if (opt.libc.empty())
+                opt.libc = path;
+            break;
+
+        case FileType::LOADER:
+            if (opt.ld.empty())
+                opt.ld = path;
+            break;
+
+        case FileType::NOT_ELF:
+            break;
         }
 
-        if (!opt.elf.empty() && !opt.ld.empty() && !opt.libc.empty())
+        if (!opt.elf.empty() && !opt.libc.empty() && !opt.ld.empty())
             return;
     }
 }
-
+    
 void print_binaries(const commands::StartOptions &opt)
 {
     if (opt.elf.empty())

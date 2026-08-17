@@ -1,0 +1,5 @@
+solve_file = "solve.py"
+template_file = "/home/giovanni/.config/pwnit/templates/default.py"
+libc_db = "https://libc.rip/api/find"
+
+dangerous_functions = ["execve", "gets", "mmap", "strcpy", "system"]

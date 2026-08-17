@@ -7,7 +7,8 @@
 namespace pwnit::elf
 {
 
-static bool has_bind_now(const LIEF::ELF::Binary &binary)
+static
+bool has_bind_now(const LIEF::ELF::Binary &binary)
 {
     if (binary[LIEF::ELF::DynamicEntry::TAG::BIND_NOW])
         return true;
@@ -35,7 +36,8 @@ static bool has_bind_now(const LIEF::ELF::Binary &binary)
     return false;
 }
     
-static RELRO has_relro(const LIEF::ELF::Binary &binary)
+static
+RELRO has_relro(const LIEF::ELF::Binary &binary)
 {
     const bool has_relro =
         binary.has(LIEF::ELF::Segment::TYPE::GNU_RELRO);
@@ -49,9 +51,11 @@ static RELRO has_relro(const LIEF::ELF::Binary &binary)
     return RELRO::PARTIAL;
 }
     
-static inline uint8_t extract_metadata(const LIEF::ELF::Binary &binary)
+static inline
+uint8_t extract_metadata(const LIEF::ELF::Binary &binary)
 {
-    return SET_CANARY(binary.has_dynamic_symbol("__stack_chk_fail")) |
+    return
+        SET_CANARY(binary.has_dynamic_symbol("__stack_chk_fail")) |
         SET_NX(binary.has_nx()) |
         SET_PIE(binary.is_pie()) |
         SET_RELRO(has_relro(binary)) |
@@ -113,17 +117,17 @@ bool Elf::is_libc() const
     
     if (binary.header().file_type() != LIEF::ELF::Header::FILE_TYPE::DYN)
         return false;
-
+    
     if (!binary.has_dynamic_symbol("__libc_start_main"))
         return false;
-
+    
     const auto* soname = binary.get(LIEF::ELF::DynamicEntry::TAG::SONAME);
     if (soname == nullptr)
         return false;
     
     const auto* library =
         soname->cast<LIEF::ELF::DynamicEntryLibrary>();
-
+    
     return library != nullptr && library->name().starts_with("libc.so");
 }
 
@@ -150,12 +154,14 @@ const std::string Elf::interpreter() const noexcept
     return "";
 }
     
-decltype(Sections::sections)Elf::load_sections()
+decltype(Sections::sections)
+Elf::load_sections()
 {
     return this->sections.load(*this->impl->binary);
 }
 
-decltype(Symbols::symbols) Elf::load_symbols()
+decltype(Symbols::symbols)
+Elf::load_symbols()
 {
     return this->symbols.load(*this->impl->binary);
 }
