@@ -4,7 +4,7 @@
 
 #include <pwnit/commands.hpp>
 #include <pwnit/start/start.hpp>
-#include <pwnit/utils/utils.hpp>
+#include <pwnit/utils/assert.hpp>
 
 namespace pwnit::start
 {
@@ -22,7 +22,7 @@ void run_patchelf(const std::vector<std::string> &args)
 
     const pid_t pid = fork();
     
-    utils::assert_fail(
+    assert::fail(
         pid >= 0,
         "Could not fork for patchelf"
     );
@@ -34,12 +34,12 @@ void run_patchelf(const std::vector<std::string> &args)
 
     int status = 0;
 
-    utils::assert_fail(
+    assert::fail(
         waitpid(pid, &status, 0) >= 0,
         "Could not wait for patchelf"
     );
 
-    utils::assert_fail(
+    assert::fail(
         WIFEXITED(status) && WEXITSTATUS(status) == 0,
         "patchelf failed"
     );
@@ -55,8 +55,8 @@ std::string patchelf(const commands::StartOptions &opt)
         std::filesystem::copy_options::overwrite_existing
     );
 
-    const auto libc_dir = std::filesystem::absolute(opt.libc).parent_path();
-    const auto ld = std::filesystem::absolute(opt.ld);
+    const auto libc_dir = std::filesystem::path(opt.libc).parent_path();
+    const auto ld = std::filesystem::path(opt.ld);
 
     run_patchelf({
         "patchelf",
@@ -70,9 +70,10 @@ std::string patchelf(const commands::StartOptions &opt)
         "--set-interpreter",
         ld.string(),
         output
-    });
+        });
 
     return output;
 }
 
 }
+

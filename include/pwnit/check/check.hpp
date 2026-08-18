@@ -1,7 +1,7 @@
 #pragma once
 
 #include <pwnit/commands.hpp>
-#include <pwnit/elf/elf.hpp>
+#include <pwnit/core/elf/elf.hpp>
 
 namespace pwnit::checksec {
     

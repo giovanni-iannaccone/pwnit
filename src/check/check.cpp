@@ -1,7 +1,7 @@
 #include <pwnit/check/check.hpp>
 #include <pwnit/commands.hpp>
-#include <pwnit/console/console.hpp>
-#include <pwnit/elf/elf.hpp>
+#include <pwnit/core/elf/elf.hpp>
+#include <pwnit/utils/console.hpp>
 
 namespace pwnit::checksec
 {

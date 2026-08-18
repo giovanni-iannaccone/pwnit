@@ -32,6 +32,27 @@ public:
     explicit CheckCommand(CLI::App &app);
 };
 
+enum ContainerType
+{
+    DOCKER,
+    PODMAN
+};
+
+struct ContainerOptions
+{
+    ContainerType type;
+    uint16_t port;
+    std::string container_id;
+};
+
+class ContainerCommand
+{
+    ContainerOptions opt;
+    
+public:
+    explicit ContainerCommand(CLI::App &app);
+};
+
 struct StartOptions {
     std::string elf;
     std::string libc;

@@ -1,6 +1,6 @@
-#include <pwnit/elf/elf.hpp>
-#include <pwnit/elf/utils.hpp>
-#include <pwnit/utils/utils.hpp>
+#include <pwnit/core/elf/elf.hpp>
+#include <pwnit/core/elf/utils.hpp>
+#include <pwnit/core/utils/utils.hpp>
 
 #include <LIEF/ELF.hpp>
 

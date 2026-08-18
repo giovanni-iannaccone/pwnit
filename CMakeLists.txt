@@ -22,6 +22,14 @@ set(LIEF_EXAMPLES OFF CACHE BOOL "" FORCE)
 set(LIEF_TESTS OFF CACHE BOOL "" FORCE)
 
 FetchContent_Declare(
+    httplib
+    GIT_REPOSITORY https://github.com/yhirose/cpp-httplib.git
+    GIT_TAG v0.23.0
+)
+
+FetchContent_MakeAvailable(httplib)
+
+FetchContent_Declare(
     lief
     URL https://github.com/lief-project/LIEF/archive/refs/tags/1.0.0.tar.gz
 )
@@ -102,9 +110,9 @@ target_link_libraries(pwnit
         capstone
         CLI11::CLI11
         pantor::inja
+        httplib::httplib
         tomlplusplus::tomlplusplus
         nlohmann_json::nlohmann_json
-        CURL::libcurl
         spdlog::spdlog
 )
 

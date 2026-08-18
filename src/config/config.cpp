@@ -2,7 +2,7 @@
 #include <iostream>
 
 #include <pwnit/config/config.hpp>
-#include <pwnit/console/console.hpp>
+#include <pwnit/utils/console.hpp>
 
 #include <toml++/impl/parser.hpp>
 

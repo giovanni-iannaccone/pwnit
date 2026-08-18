@@ -5,13 +5,13 @@
 namespace pwnit::libc
 {
 
-constexpr auto DOWNLOAD_FAILED = 0;
-
 struct Libc
 {
     std::string build_id;
     std::string soname;
     std::string version;
+
+    void print_debug_info() const noexcept;
 };
 
 Libc identify(const std::string &path);

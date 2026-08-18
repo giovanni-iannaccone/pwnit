@@ -1,7 +1,7 @@
 #include <pwnit/commands.hpp>
-#include <pwnit/console/console.hpp>
-#include <pwnit/elf/elf.hpp>
+#include <pwnit/core/elf/elf.hpp>
 #include <pwnit/start/start.hpp>
+#include <pwnit/utils/console.hpp>
 
 namespace pwnit::start
 {

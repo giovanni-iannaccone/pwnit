@@ -2,10 +2,10 @@
 #include <fstream>
 
 #include <pwnit/config/config.hpp>
-#include <pwnit/console/console.hpp>
 #include <pwnit/download/download.hpp>
+#include <pwnit/utils/console.hpp>
 
-#include <curl/curl.h>
+#include <httplib.h>
 #include <nlohmann/json.hpp>
 
 namespace pwnit::download
@@ -65,7 +65,7 @@ std::string download_file(const std::string &url)
 {
     const auto path = std::filesystem::path(url).filename();
 
-    std::ofstream file{path, std::ios::binary};
+    std::ofstream file {path, std::ios::binary};
     CURL *curl = curl_easy_init();
 
     curl_easy_setopt(curl, CURLOPT_URL, url.c_str());

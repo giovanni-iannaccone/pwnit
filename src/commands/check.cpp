@@ -16,7 +16,7 @@ namespace pwnit::commands
         cmd->add_flag("--sections", this->opt.sections, "load sections");
         
         cmd->callback([&] () {
-            pwnit::checksec::checksec(this->opt);
+            checksec::checksec(this->opt);
         });
     }
 };

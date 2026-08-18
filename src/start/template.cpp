@@ -5,8 +5,9 @@
 
 #include <pwnit/commands.hpp>
 #include <pwnit/config/config.hpp>
-#include <pwnit/console/console.hpp>
-#include <pwnit/utils/utils.hpp>
+#include <pwnit/utils/assert.hpp>
+#include <pwnit/utils/console.hpp>
+#include <pwnit/utils/file.hpp>
 
 #include <inja/inja.hpp>
 #include <nlohmann/json.hpp>
@@ -51,7 +52,7 @@ std::string parse_template(commands::StartOptions &opt)
     const auto &cfg = config::Config::instance();
     std::ifstream template_fd {cfg.template_file};
 
-    utils::assert_fail(
+    assert::fail(
         template_fd.is_open(),
         "Could not open template file: {}", cfg.template_file
     );
@@ -77,7 +78,7 @@ void write_template(const std::string &result)
         solve_file = cfg.solve_file;
 
     std::ofstream solve_fd {solve_file};
-    utils::assert_fail(
+    assert::fail(
         solve_fd.is_open(),
         "Could not write solve file: {}", solve_file
     );

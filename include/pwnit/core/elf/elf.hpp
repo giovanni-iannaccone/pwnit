@@ -6,7 +6,7 @@
 #include <string>
 #include <vector>
 
-#include <pwnit/elf/utils.hpp>
+#include <pwnit/core/elf/utils.hpp>
 
 #include <LIEF/ELF.hpp>
 

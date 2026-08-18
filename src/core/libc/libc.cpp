@@ -9,6 +9,15 @@
 namespace pwnit::libc
 {
 
+void Libc::print_debug_info() const noexcept
+{
+    console::info("Libc info:");
+    console::info(
+        "soname: {}, version: {}\tbuild id: {}\t",
+        this->soname, this->version, this->build_id
+    ); 
+}
+    
 static std::string get_build_id(const std::unique_ptr<LIEF::ELF::Binary> &binary)
 {
     const LIEF::ELF::Note* note =
@@ -45,7 +54,7 @@ static std::string get_version(const std::unique_ptr<LIEF::ELF::Binary> &binary)
 
     return highest;
 }
-    
+
 Libc identify(const std::string &path)
 {
     const auto binary = LIEF::ELF::Parser::parse(path);
