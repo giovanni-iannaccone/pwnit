@@ -1,5 +1,5 @@
 #include <pwnit/commands.hpp>
-#include <pwnit/config/config.hpp>
+#include <pwnit/core/config/config.hpp>
 
 using namespace pwnit;
 

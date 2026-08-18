@@ -1,7 +1,7 @@
 #include <cstring>
 #include <iostream>
 
-#include <pwnit/config/config.hpp>
+#include <pwnit/core/config/config.hpp>
 #include <pwnit/utils/console.hpp>
 
 #include <toml++/impl/parser.hpp>
@@ -12,7 +12,7 @@ namespace pwnit::config
 const auto standard_config =
     "solve_file = \"solve.py\"\n" \
     "template_file = \"" + (std::filesystem::path(std::getenv("HOME")) / ".config/pwnit/templates/default.py\"\n").string() +
-    "libc_db = \"https://libc.rip/api/find\"\n\n" \
+    "libc_db = \"https://libc.rip\"\n\n" \
     "dangerous_functions = [\"execve\", \"gets\", \"mmap\", \"strcpy\", \"system\"]\n";
     
 static void create_config()

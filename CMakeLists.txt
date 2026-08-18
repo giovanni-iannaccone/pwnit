@@ -37,6 +37,18 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(lief)
 
 FetchContent_Declare(
+    bit7z
+    GIT_REPOSITORY https://github.com/rikyoz/bit7z.git
+    GIT_TAG        v4.0.0
+)
+
+FetchContent_MakeAvailable(bit7z)
+
+target_compile_options(bit7z64 PRIVATE
+    -include algorithm
+)
+
+FetchContent_Declare(
     capstone
     GIT_REPOSITORY https://github.com/capstone-engine/capstone.git
     GIT_TAG 5.0.6
@@ -102,13 +114,16 @@ add_executable(pwnit ${SOURCES})
 target_include_directories(pwnit
     PRIVATE
         ${PROJECT_SOURCE_DIR}/include
+        ${PROJECT_SOURCE_DIR}/src/modules
+        ${libarchive_SOURCE_DIR}/libarchive
 )
 
 target_link_libraries(pwnit
     PRIVATE
         LIEF::LIEF
         capstone
-        CLI11::CLI11
+        bit7z
+		CLI11::CLI11
         pantor::inja
         httplib::httplib
         tomlplusplus::tomlplusplus

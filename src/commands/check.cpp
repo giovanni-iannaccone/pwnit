@@ -1,5 +1,5 @@
 #include <pwnit/commands.hpp>
-#include <pwnit/check/check.hpp>
+#include <check/check.hpp>
 
 namespace pwnit::commands
 {    

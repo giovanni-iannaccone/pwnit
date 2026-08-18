@@ -1,5 +1,5 @@
 #include <pwnit/commands.hpp>
-#include <pwnit/start/start.hpp>
+#include <start/start.hpp>
 
 namespace pwnit::commands
 {    

@@ -8,8 +8,6 @@ namespace pwnit::start
     void print_binaries(const commands::StartOptions &opt);
 
     void write_solve(commands::StartOptions &opt);
-
-    std::string patchelf(const commands::StartOptions &opt);
     void start(commands::StartOptions &opt);
 
 }
