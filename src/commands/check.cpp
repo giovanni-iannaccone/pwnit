@@ -14,6 +14,7 @@ namespace pwnit::commands
 
         cmd->add_flag("--symbols", this->opt.symbols, "load symbols");
         cmd->add_flag("--sections", this->opt.sections, "load sections");
+        cmd->add_flag("--json", this->opt.json, "print data in json format");
         
         cmd->callback([&] () {
             checksec::checksec(this->opt);

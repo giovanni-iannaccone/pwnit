@@ -22,6 +22,7 @@ struct CheckOptions
     std::string file;
     bool symbols;
     bool sections;
+    bool json;
 };
 
 class CheckCommand

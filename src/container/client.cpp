@@ -2,6 +2,7 @@
 #include <fstream>
 #include <optional>
 
+#include <pwnit/container/container.hpp>
 #include <pwnit/utils/console.hpp>
 
 #include <httplib.h>
@@ -14,72 +15,66 @@ namespace pwnit::container
 constexpr auto getfile_endpoint = "/containers/{}/archive?path={}";
 constexpr auto prepcmd_endpoint = "/containers/{}/exec";
     
-struct ContainerClient
+std::optional<httplib::Result>
+ContainerClient::exec(const std::vector<std::string> &cmd)
 {
-    httplib::Client client;
-    const std::string container_id;
+    nlohmann::json body = {
+        {"AttachStdout", true},
+        {"AttachStderr", true},
+        {"Tty", false},
+        {"Cmd", cmd}
+    };
     
-    std::optional<httplib::Result>
-    exec(const std::vector<std::string> &cmd)
-    {
-        nlohmann::json body = {
-            {"AttachStdout", true},
-            {"AttachStderr", true},
-            {"Tty", false},
-            {"Cmd", cmd}
-        };
-
-        const auto endp = std::format(prepcmd_endpoint, container_id);
-
-        auto res = client.Post(
-            endp,
-            body.dump(),
-            "application/json"
-        );
-
-        if (!res || res->status != 201)
-            return std::nullopt;
-        
-        auto create_response = nlohmann::json::parse(res->body);
-        std::string exec_id = create_response["Id"];
-        
-        body = {
-            {"Detach", false},
-            {"Tty", false}
-        };
-        
-        res = client.Post(
-           "/exec/" + exec_id + "/start",
-           body.dump(),
-           "application/json"
-        );
-
-        if (!res || res->status != 201)
-            return std::nullopt;
-
-        return res;
-    }
+    const auto endp = std::format(prepcmd_endpoint, container_id);
     
-    bool getfile(const std::string &file)
-    {
-        const auto endp = std::format(getfile_endpoint, container_id, file);
-        auto res = client.Get(endp);
+    auto res = client.Post(
+        endp,
+        body.dump(),
+        "application/json"
+    );
 
-        const auto path = std::filesystem::path(file).filename();
+    if (!res || res->status != 201)
+        return std::nullopt;
+        
+    auto create_response = nlohmann::json::parse(res->body);
+    std::string exec_id = create_response["Id"];
+        
+    body = {
+        {"Detach", false},
+        {"Tty", false}
+    };
+    
+    res = client.Post(
+        "/exec/" + exec_id + "/start",
+        body.dump(),
+        "application/json"
+    );
 
-        std::ofstream fd (path);
+    if (!res || res->status != 201)
+        return std::nullopt;
+    
+    return res;
+}
 
-        if (!fd)
-            return false;
-
-        fd << res->body;
-        return true;
-    }
-
-    void set_address_family(int fam)
-    {
-        return client.set_address_family(fam);
-    }
-};
+bool ContainerClient::getfile(const std::string &file)
+{
+    const auto endp = std::format(getfile_endpoint, container_id, file);
+    auto res = client.Get(endp);
+    
+    const auto path = std::filesystem::path(file).filename();
+    
+    std::ofstream fd (path);
+    
+    if (!fd)
+        return false;
+    
+    fd << res->body;
+    return true;
+}
+    
+void ContainerClient::set_address_family(int fam)
+{
+    return client.set_address_family(fam);
+}
 
 }

@@ -6,18 +6,17 @@
 namespace pwnit::checksec
 {
     
-static inline void log_section(elf::Section &sec)
+static void handle_json(elf::Elf &e, bool sections, bool symbols)
 {
-    console::success("{}:", sec.name);
-    console::log("\taddr: {:#x}\toffset: {}\tsize: {}\n", sec.address, sec.offset, sec.size);
-}
+    if (sections)
+        e.load_sections();
 
-static inline void log_symbol(elf::Symbol &sym)
-{
-    console::success("{}:", sym.name);
-    console::log("\taddr: {:#x}\tsize: {}\n", sym.address, sym.size);
-}
+    if (symbols)
+        e.load_symbols();
 
+    console::log("{}", e.to_json().dump(4));
+}
+    
 static inline void print_generic_data(elf::Elf &e)
 {
     console::log("Arch: {}\t{}\tLinking: {}",
@@ -63,12 +62,24 @@ static inline void print_elf_sec_measures(elf::Elf &e)
     console::log("");
 }
 
+static inline void print_section(elf::Section &sec)
+{
+    console::success("{}:", sec.name);
+    console::log("\taddr: {:#x}\toffset: {}\tsize: {}\n", sec.address, sec.offset, sec.size);
+}
+
 static inline void print_sections(elf::Elf &e)
 {
     console::info("SECTIONS:");
     
     for (auto &&sec: e.load_sections())
-        log_section(sec);
+        print_section(sec);
+}
+
+static inline void print_symbol(elf::Symbol &sym)
+{
+    console::success("{}:", sym.name);
+    console::log("\taddr: {:#x}\tsize: {}\n", sym.address, sym.size);
 }
 
 static inline void print_symbols(elf::Elf &e)
@@ -76,13 +87,18 @@ static inline void print_symbols(elf::Elf &e)
     console::info("SYMBOLS:");
     
     for (auto &&sym: e.load_symbols())
-        log_symbol(sym);
+        print_symbol(sym);
 }
 
 void checksec(const commands::CheckOptions &opt)
 {
     elf::Elf e {opt.file};
 
+    if (opt.json) {
+        handle_json(e, opt.sections, opt.symbols);
+        return;
+    }
+    
     console::log("[ {} ]\n", opt.file);
 
     print_generic_data(e);    

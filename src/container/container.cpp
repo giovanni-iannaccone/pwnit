@@ -14,7 +14,7 @@ void download(ContainerClient &client, const std::vector<std::string> &files)
 {
     for (auto &&file: files) {
         if (!client.getfile(file))
-            console::error("Couldn't download file {}", std::filesystem::path(file).filename());
+            console::error("Couldn't download file {}", std::filesystem::path(file).filename().string());
         else
             console::success("Successfully downloaded {}", file);
     }
@@ -52,7 +52,7 @@ find_libc_and_ld(ContainerClient &client, int pid)
         {"cat", std::format("/proc/{}/maps", pid)}
     );
     
-    assert::fail(res != std::nullopt, "Couldn't communicate with socket");
+    assert::fail(res != std::nullopt, "Couldn't communicate with socket to check pid {}", pid);
     
     return {
         find_path(res->value().body, "libc.so"),
@@ -67,7 +67,7 @@ int find_process_pid(ContainerClient &client, uint16_t port)
         {"ss", "-lp", "'sport", "=", std::format(":{}'", port)}
     );
 
-    assert::fail(res != std::nullopt, "Couldn't communicate with socket");
+    assert::fail(res != std::nullopt, "Couldn't communicate with socket to check service on port {}", port);
 
     static const std::regex re (R"(pid=(\d+))");
     std::smatch match;

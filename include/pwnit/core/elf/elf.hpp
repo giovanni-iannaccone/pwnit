@@ -9,6 +9,7 @@
 #include <pwnit/core/elf/utils.hpp>
 
 #include <LIEF/ELF.hpp>
+#include <nlohmann/json.hpp>
 
 namespace pwnit::elf
 {
@@ -22,11 +23,22 @@ enum RELRO: uint8_t
     PARTIAL = 1,
     FULL = 2
 };
-    
+
+constexpr std::string_view to_string(RELRO relro)
+{
+    switch (relro) {
+        case RELRO::NONE:    return "none";
+        case RELRO::PARTIAL: return "partial";
+        case RELRO::FULL:    return "full";
+    }
+
+    return "unknown";
+}
+
 struct Arch
 {
     uint8_t value {};
-    const char *to_string();
+    const char *to_string() const;
 };
     
 struct Section
@@ -55,7 +67,13 @@ struct Symbols
     std::vector<Symbol> symbols;
     decltype(Symbols::symbols) load(const LIEF::ELF::Binary &binary);
 };
-    
+
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(Arch, value)
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(Section, name, address, size, offset)
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(Symbol, name, address, size)
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(Sections, sections)
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(Symbols, symbols)
+
 struct Elf
 {
 protected:
@@ -125,6 +143,8 @@ public:
     {
         return GET_STATICAL(this->metadata);
     }
+
+    nlohmann::json to_json() const;
 };
 
 }

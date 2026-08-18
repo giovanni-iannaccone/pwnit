@@ -1,6 +1,6 @@
 #include <pwnit/core/elf/elf.hpp>
 #include <pwnit/core/elf/utils.hpp>
-#include <pwnit/core/utils/utils.hpp>
+#include <pwnit/utils/assert.hpp>
 
 #include <LIEF/ELF.hpp>
 
@@ -74,7 +74,7 @@ Elf::Elf(const std::filesystem::path &filepath, bool die_on_error)
     this->impl->binary = LIEF::ELF::Parser::parse(filepath.string());
 
     if (die_on_error) {
-        utils::assert_fail(this->impl->binary != nullptr,
+        assert::fail(this->impl->binary != nullptr,
             "Failed to parse ELF: {}", filepath.string()
         );
     } else if (this->impl->binary == nullptr) {
@@ -166,4 +166,20 @@ Elf::load_symbols()
     return this->symbols.load(*this->impl->binary);
 }
     
+nlohmann::json Elf::to_json() const
+{
+    return {
+        {"arch", this->arch.to_string()},
+        {"entry", std::format("{:#x}", this->entry)},
+        {"sections", this->sections},
+        {"symbols", this->symbols},
+        {"canary", this->canary()},
+        {"nx", this->nx()},
+        {"pie", this->pie()},
+        {"relro", elf::to_string(RELRO{this->relro()})},
+        {"stripped", this->stripped()},
+        {"statical", this->statical()}
+    };
+}
+
 }

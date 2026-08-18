@@ -1,10 +1,10 @@
-#include "LIEF/ELF/Binary.hpp"
 #include <pwnit/config/config.hpp>
-#include <pwnit/libc/libc.hpp>
-#include <pwnit/utils/utils.hpp>
+#include <pwnit/core/libc/libc.hpp>
+#include <pwnit/utils/console.hpp>
 
 #include <curl/curl.h>
 #include <LIEF/ELF.hpp>
+#include <LIEF/ELF/Binary.hpp>
 
 namespace pwnit::libc
 {

@@ -39,7 +39,7 @@ struct ContainerClient
     const std::string container_id;
     
     std::optional<httplib::Result>
-    exec(const std::vector<std::string> &cmd);    
+    exec(const std::vector<std::string> &cmd);
 
     bool getfile(const std::string &file);
     
