@@ -1,13 +1,26 @@
 #include <cstdint>
+#include <optional>
 #include <regex>
 
 #include <pwnit/commands.hpp>
 #include <pwnit/container/container.hpp>
+#include <pwnit/utils/assert.hpp>
 
 namespace pwnit::container
 {
 
-std::string
+static
+void download(ContainerClient &client, const std::vector<std::string> &files)
+{
+    for (auto &&file: files) {
+        if (!client.getfile(file))
+            console::error("Couldn't download file {}", std::filesystem::path(file).filename());
+        else
+            console::success("Successfully downloaded {}", file);
+    }
+}
+    
+static std::string
 find_path(const std::string& block, const std::string& name)
 {
     std::istringstream stream (block);
@@ -32,33 +45,39 @@ find_path(const std::string& block, const std::string& name)
     return "";
 }
 
-std::pair<std::string, std::string>
+static std::pair<std::string, std::string>
 find_libc_and_ld(ContainerClient &client, int pid)
 {
     auto res = client.exec(
         {"cat", std::format("/proc/{}/maps", pid)}
     );
     
+    assert::fail(res != std::nullopt, "Couldn't communicate with socket");
+    
     return {
-        find_path(res->body, "libc.so"),
-        find_path(res->body, "ld-linux")
+        find_path(res->value().body, "libc.so"),
+        find_path(res->value().body, "ld-linux")
     };
 }
-    
+
+static
 int find_process_pid(ContainerClient &client, uint16_t port)
 {
     auto res = client.exec(
         {"ss", "-lp", "'sport", "=", std::format(":{}'", port)}
     );
 
+    assert::fail(res != std::nullopt, "Couldn't communicate with socket");
+
     static const std::regex re (R"(pid=(\d+))");
     std::smatch match;
 
-    return std::regex_search(res->body, match, re)
+    return std::regex_search(res->value().body, match, re)
         ? std::atoi(match[1].str().c_str())
         : 0;
 }
 
+static 
 ContainerClient initialize_client(const commands::ContainerOptions &opt)
 {
     std::string sock = (opt.type == commands::ContainerType::DOCKER)
@@ -71,18 +90,16 @@ ContainerClient initialize_client(const commands::ContainerOptions &opt)
     return client;
 }
 
-int extract(const commands::ContainerOptions &opt)
+void extract(const commands::ContainerOptions &opt)
 {
     ContainerClient client = initialize_client(opt);
 
     int pid = find_process_pid(client, opt.port);
+
     const auto && [libc, ld] =
         find_libc_and_ld(client, pid);
     
-    client.getfile(libc);
-    client.getfile(ld);
-
-    return 0;
+    download(client, {libc, ld});
 }
 
 }

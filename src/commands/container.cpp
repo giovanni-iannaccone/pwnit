@@ -8,7 +8,7 @@ namespace pwnit::commands
     ContainerCommand::ContainerCommand(CLI::App &app)
     {
         auto cmd = app.add_subcommand(
-            "container", "Extracts libcs from Docker and Podman container"
+            "container", "Extracts libc and ld from Docker/Podman container"
         );
         
         cmd->add_option("id", this->opt.container_id, "Container ID")

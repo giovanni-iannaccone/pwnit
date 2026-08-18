@@ -12,6 +12,7 @@ int main(int argc, char **argv)
 
     commands::AnalysisCommand analysis {app};
     commands::CheckCommand chk {app};
+    commands::ContainerCommand container {app};
     commands::StartCommand start {app};
     
     CLI11_PARSE(app, argc, argv);

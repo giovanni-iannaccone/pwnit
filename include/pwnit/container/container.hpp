@@ -38,12 +38,14 @@ struct ContainerClient
     httplib::Client client;
     const std::string container_id;
     
-    httplib::Result exec(const std::vector<std::string> &cmd);    
-    void getfile(const std::string &file);
+    std::optional<httplib::Result>
+    exec(const std::vector<std::string> &cmd);    
+
+    bool getfile(const std::string &file);
     
     void set_address_family(int fam);
 };
 
-int extract(const commands::ContainerOptions &opt);
+void extract(const commands::ContainerOptions &opt);
     
 }

@@ -1,5 +1,6 @@
 #include <filesystem>
 #include <fstream>
+#include <optional>
 
 #include <pwnit/utils/console.hpp>
 
@@ -18,7 +19,8 @@ struct ContainerClient
     httplib::Client client;
     const std::string container_id;
     
-    httplib::Result exec(const std::vector<std::string> &cmd)
+    std::optional<httplib::Result>
+    exec(const std::vector<std::string> &cmd)
     {
         nlohmann::json body = {
             {"AttachStdout", true},
@@ -29,14 +31,36 @@ struct ContainerClient
 
         const auto endp = std::format(prepcmd_endpoint, container_id);
 
-        return client.Post(
+        auto res = client.Post(
             endp,
             body.dump(),
             "application/json"
         );
+
+        if (!res || res->status != 201)
+            return std::nullopt;
+        
+        auto create_response = nlohmann::json::parse(res->body);
+        std::string exec_id = create_response["Id"];
+        
+        body = {
+            {"Detach", false},
+            {"Tty", false}
+        };
+        
+        res = client.Post(
+           "/exec/" + exec_id + "/start",
+           body.dump(),
+           "application/json"
+        );
+
+        if (!res || res->status != 201)
+            return std::nullopt;
+
+        return res;
     }
     
-    void getfile(const std::string &file)
+    bool getfile(const std::string &file)
     {
         const auto endp = std::format(getfile_endpoint, container_id, file);
         auto res = client.Get(endp);
@@ -45,12 +69,11 @@ struct ContainerClient
 
         std::ofstream fd (path);
 
-        if (!fd) {
-            console::error("Couldn't create file {}", path);
-            return;
-        }
+        if (!fd)
+            return false;
 
         fd << res->body;
+        return true;
     }
 
     void set_address_family(int fam)
