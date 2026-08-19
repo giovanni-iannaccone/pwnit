@@ -1,5 +1,6 @@
 #pragma once
 
+#include <pwnit/utils/string.hpp>
 #include <spdlog/spdlog.h>
 
 namespace pwnit::console

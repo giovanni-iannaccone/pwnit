@@ -11,9 +11,9 @@ namespace pwnit::libc
 
 void Libc::print_debug_info() const noexcept
 {
-    console::info("Libc info:");
+    console::log("Libc info:");
     console::log(
-        "\tsoname: {}, version: {}\tbuild id: {}\t",
+        "soname: {} version: {}\tbuild id: {}\t",
         std::filesystem::path(this->soname).filename().string(),
         this->version, this->build_id
     ); 

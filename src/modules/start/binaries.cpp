@@ -85,6 +85,8 @@ void print_binaries(const commands::StartOptions &opt)
         console::error("Loader not found");
     else
         console::success("Loader: {}", opt.ld);
+
+    console::log("");
 }
     
 }

@@ -4,45 +4,35 @@
 
 #include <pwnit/commands.hpp>
 #include <pwnit/services/patch/patch.hpp>
+#include <pwnit/services/system/system.hpp>
 #include <pwnit/utils/assert.hpp>
 
 namespace pwnit::patch
 {
 
 static
-void run_patchelf(const std::vector<std::string> &args)
+void set_interpreter(const std::string &output, const std::string &ld)
 {
-    std::vector<char*> argv;
-    argv.reserve(args.size() + 1);
+    if (!ld.empty()) {
+        auto result = system::run(
+        	std::format("patchelf --set-interpreter {} {}", ld, output)
+    	);
 
-    for (const auto& arg : args)
-        argv.push_back(const_cast<char*>(arg.c_str()));
-
-    argv.push_back(nullptr);
-
-    const pid_t pid = fork();
+        assert::fail(result && *result == 0, "Failed to run patchelf");
+    }
+}
     
-    assert::fail(
-        pid >= 0,
-        "Could not fork for patchelf"
-    );
+static
+void set_rpath(const std::string &output, const std::string &libc_dir)
+{
+    if (!libc_dir.empty()) {
+        auto result = system::run(
+            std::format("patchelf --set-rpath {} {}", libc_dir, output)
+        );
 
-    if (pid == 0) {
-        execvp(argv[0], argv.data());
-        std::exit(EXIT_FAILURE);
-    } 
+        assert::fail(result && *result == 0, "Failed to run patchelf");
+    }
 
-    int status = 0;
-
-    assert::fail(
-        waitpid(pid, &status, 0) >= 0,
-        "Could not wait for patchelf"
-    );
-
-    assert::fail(
-        WIFEXITED(status) && WEXITSTATUS(status) == 0,
-        "patchelf failed"
-    );
 }
     
 std::string patchelf(const commands::StartOptions &opt)
@@ -55,23 +45,12 @@ std::string patchelf(const commands::StartOptions &opt)
         std::filesystem::copy_options::overwrite_existing
     );
 
-    const auto libc_dir = std::filesystem::path(opt.libc).parent_path();
-    const auto ld = std::filesystem::path(opt.ld);
-
-    run_patchelf({
-        "patchelf",
-        "--set-rpath",
-        libc_dir.string(),
-        output
-    });
-
-    run_patchelf({
-        "patchelf",
-        "--set-interpreter",
-        ld.string(),
-        output
-        });
-
+    const std::string libc_dir = std::filesystem::path(opt.libc).parent_path();
+    const std::string ld = std::filesystem::path(opt.ld);
+    
+    set_rpath(output, libc_dir);
+    set_interpreter(output, ld);
+    
     return output;
 }
 

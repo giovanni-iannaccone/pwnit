@@ -8,18 +8,17 @@
 #include <pwnit/utils/assert.hpp>
 #include <pwnit/utils/console.hpp>
 #include <pwnit/utils/file.hpp>
-
-#include <start/start.hpp>
+#include <pwnit/utils/string.hpp>
 
 #include <inja/inja.hpp>
 #include <nlohmann/json.hpp>
 
-namespace pwnit::start
+namespace pwnit::templates
 {
 
-constexpr auto elf = "exe = ELF(\"{}\", checksec=True)"; 
-constexpr auto libc = "libc = ELF(\"{}\", checksec=False)";
-constexpr auto ld = "ld = ELF(\"{}\", checksec=False)";
+constexpr string::fixed elf  = "exe = ELF(\"./{}\", checksec=True)"; 
+constexpr string::fixed libc = "libc = ELF(\"./{}\", checksec=False)";
+constexpr string::fixed ld   = "ld = ELF(\"./{}\", checksec=False)";
 
 static inline
 std::string ask_solve_file()
@@ -30,6 +29,12 @@ std::string ask_solve_file()
     std::getline(std::cin, solve);
     return solve;
 }
+
+template <string::fixed Fmt> constexpr
+std::string get_binaries_pwntools_decl(const std::filesystem::path &path)
+{
+    return std::format("{}\n", std::format(Fmt, path.filename().string()));
+}
     
 static inline
 std::string format_binaries(const commands::StartOptions &opt)
@@ -37,13 +42,13 @@ std::string format_binaries(const commands::StartOptions &opt)
     std::string binaries = "";
 
     if (!opt.elf.empty())
-        binaries += std::format("{}\n", std::format(elf, opt.elf));
+        binaries += get_binaries_pwntools_decl<elf>(opt.elf);
 
     if (!opt.libc.empty())
-        binaries += std::format("{}\n", std::format(libc, opt.libc));
-
+        binaries += get_binaries_pwntools_decl<libc>(opt.libc);
+    
     if (!opt.ld.empty())
-        binaries += std::format("{}\n", std::format(ld, opt.ld));
+        binaries += get_binaries_pwntools_decl<ld>(opt.ld);
 
     return binaries;
 }
