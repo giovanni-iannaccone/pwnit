@@ -1,11 +1,13 @@
 #pragma once
 
+#include "LIEF/ELF/Section.hpp"
 #include <cstdint>
 #include <filesystem>
 #include <memory>
 #include <string>
 #include <vector>
 
+#include <capstone/capstone.h>
 #include <LIEF/ELF.hpp>
 #include <nlohmann/json.hpp>
 
@@ -14,7 +16,7 @@ namespace pwnit::elf
 
 constexpr auto DONT_DIE_ON_ERR = false;
 constexpr auto DIE_ON_ERR = true;
-    
+
 enum RELRO: uint8_t
 {
     NONE = 0,
@@ -45,6 +47,11 @@ struct Section
     uint64_t address {};
     uint64_t size {};
     uint64_t offset {};
+
+    Section() = default;
+    
+    Section(const LIEF::ELF::Section *sec);
+    Section(const LIEF::ELF::Section &sec);
 };
 
 struct Sections
@@ -131,6 +138,11 @@ public:
     bool has_dynamic_symbol(const std::string& name) const;
     bool has_section(const std::string& name) const;
 
+    std::pair<Section, const std::span<const uint8_t>>
+    get_section(const std::string &name) const;
+
+    cs_mode elf_class() const;
+    
     bool is_libc() const;
     bool is_loader() const;
 

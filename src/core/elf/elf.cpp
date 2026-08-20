@@ -1,67 +1,12 @@
+#include "LIEF/ELF/Header.hpp"
+#include "capstone/capstone.h"
 #include <pwnit/core/elf/elf.hpp>
-#include <pwnit/core/elf/utils.hpp>
 #include <pwnit/utils/assert.hpp>
 
 #include <LIEF/ELF.hpp>
 
 namespace pwnit::elf
 {
-
-static
-bool has_bind_now(const LIEF::ELF::Binary &binary)
-{
-    if (binary[LIEF::ELF::DynamicEntry::TAG::BIND_NOW])
-        return true;
-
-    if (const auto* entry =
-        binary[LIEF::ELF::DynamicEntry::TAG::FLAGS]) {
-        
-        if (const auto* flags =
-            entry->cast<LIEF::ELF::DynamicEntryFlags>()) {
-            if (flags->has(LIEF::ELF::DynamicEntryFlags::FLAG::BIND_NOW))
-                return true;
-        }
-    }
-    
-    if (const auto* entry =
-        binary[LIEF::ELF::DynamicEntry::TAG::FLAGS_1]) {
-        
-        if (const auto* flags =
-            entry->cast<LIEF::ELF::DynamicEntryFlags>()) {
-            if (flags->has(LIEF::ELF::DynamicEntryFlags::FLAG::NOW))
-                return true;
-        }
-    }
-    
-    return false;
-}
-    
-static
-RELRO has_relro(const LIEF::ELF::Binary &binary)
-{
-    const bool has_relro =
-        binary.has(LIEF::ELF::Segment::TYPE::GNU_RELRO);
-    
-    if (!has_relro)
-        return RELRO::NONE;
-    
-    if (has_bind_now(binary))
-        return RELRO::FULL;
-    
-    return RELRO::PARTIAL;
-}
-    
-static inline
-uint8_t extract_metadata(const LIEF::ELF::Binary &binary)
-{
-    return
-        SET_CANARY(binary.has_dynamic_symbol("__stack_chk_fail")) |
-        SET_NX(binary.has_nx()) |
-        SET_PIE(binary.is_pie()) |
-        SET_RELRO(has_relro(binary)) |
-        SET_STATICAL(binary.has_interpreter()) |
-        SET_STRIPPED(!binary.has_section(".symtab"));
-}   
 
 struct Elf::Impl
 {
@@ -87,12 +32,36 @@ Elf::Elf(const std::filesystem::path &filepath, bool die_on_error)
     this->arch.value = static_cast<uint8_t>(binary.header().machine_type());
     this->entry = binary.entrypoint();
 
-    this->metadata = extract_metadata(binary);
+    this->secmes = SecurityMeasures {binary};
     this->valid = true;
 }
 
 Elf::~Elf() = default;
 
+cs_mode Elf::elf_class() const
+{
+    const auto &binary = *this->impl->binary;
+    auto eclass = binary.header().identity_class();
+
+    if (eclass == LIEF::ELF::Header::CLASS::ELF32)
+        return CS_MODE_32;
+
+    return CS_MODE_64;
+}
+    
+std::pair<Section, const std::span<const uint8_t>>
+Elf::get_section(const std::string &name) const
+{
+    const auto &binary = *this->impl->binary;
+    if (!binary.has_section(name))
+        return {};
+
+    const auto sec = binary.get_section(name);
+    Section section {sec};
+
+    return {section, sec->content()};
+}
+    
 bool Elf::has_symbol(const std::string& name) const
 {
     const auto &binary = *this->impl->binary;

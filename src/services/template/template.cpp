@@ -1,3 +1,4 @@
+#include <exception>
 #include <filesystem>
 #include <format>
 #include <fstream>
@@ -86,8 +87,16 @@ std::string parse_template(commands::StartOptions &opt)
 
     std::string py_template = utils::read_whole_file(template_fd);
     nlohmann::json data = get_data_for_template(opt);
-    
-    return inja::render(py_template, data);
+
+    try {
+        return inja::render(py_template, data);
+    } catch (std::exception &e) {
+        console::error("{}", e.what());
+    } catch (...) {
+        console::error("Unknown error in template rendering");
+    }
+
+    return "";
 }
 
 static inline
@@ -119,6 +128,9 @@ void write_template(const std::string &result)
 void write_solve(commands::StartOptions &opt)
 {
     std::string result = parse_template(opt);
+    if (result.empty())
+        return;
+    
     write_template(result);
 }
 

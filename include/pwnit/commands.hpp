@@ -56,6 +56,8 @@ public:
 
 struct RopOptions {
     bool json;
+    int depth;
+    std::string search;
     std::string elf;
 };
 

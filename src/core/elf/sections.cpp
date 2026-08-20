@@ -2,7 +2,19 @@
 
 namespace pwnit::elf
 {
-    
+
+Section::Section(const LIEF::ELF::Section &sec)
+    : name(sec.name()),
+      address(sec.virtual_address()),
+      size(sec.size()),
+      offset(sec.file_offset()) {}
+
+Section::Section(const LIEF::ELF::Section *sec)
+    : name(sec->name()),
+      address(sec->virtual_address()),
+      size(sec->size()),
+      offset(sec->file_offset()) {}
+   
 decltype(Sections::sections)
 Sections::load(const LIEF::ELF::Binary &binary)
 {
@@ -10,12 +22,7 @@ Sections::load(const LIEF::ELF::Binary &binary)
         if (section.name().size() == 0) [[unlikely]]
             continue;
         
-        this->sections.emplace_back(
-            section.name(),
-            section.virtual_address(),
-            section.size(),
-            section.file_offset()
-        );
+        this->sections.emplace_back(section);
     }
 
     return this->sections;
