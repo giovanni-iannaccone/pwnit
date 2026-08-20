@@ -18,21 +18,22 @@ void set_interpreter(const std::string &output, const std::string &ld)
         	std::format("patchelf --set-interpreter {} {}", ld, output)
     	);
 
-        assert::fail(result && *result == 0, "Failed to run patchelf");
+        if (!result && *result != 0)
+            console::error("Failed to run patchelf");
     }
 }
     
 static
-void set_rpath(const std::string &output, const std::string &libc_dir)
+void set_rpath(const std::string &output, const std::string &libc)
 {
-    if (!libc_dir.empty()) {
+    if (!libc.empty()) {
         auto result = system::run(
-            std::format("patchelf --set-rpath {} {}", libc_dir, output)
+            std::format("patchelf --set-rpath . {}", output)
         );
 
-        assert::fail(result && *result == 0, "Failed to run patchelf");
+        if (!result && *result != 0)
+            console::error("Failed to run patchelf");
     }
-
 }
     
 std::string patchelf(const commands::StartOptions &opt)
@@ -44,13 +45,14 @@ std::string patchelf(const commands::StartOptions &opt)
         output,
         std::filesystem::copy_options::overwrite_existing
     );
-
-    const std::string libc_dir = std::filesystem::path(opt.libc).parent_path();
-    const std::string ld = std::filesystem::path(opt.ld);
     
-    set_rpath(output, libc_dir);
+    const std::string libc = std::filesystem::path(opt.libc).filename();
+    const std::string ld = std::filesystem::path(opt.ld).filename();
+    
+    set_rpath(output, libc);
     set_interpreter(output, ld);
-    
+
+    set_interpreter(libc, ld);
     return output;
 }
 

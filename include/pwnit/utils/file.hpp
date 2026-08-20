@@ -39,7 +39,7 @@ inline std::optional<std::filesystem::path>
 find_file(const std::filesystem::path& root, std::string_view startswith)
 {
     CheckFunction check_func = [] (const std::filesystem::directory_entry &entry) {
-        return !entry.is_regular_file() && !entry.is_symlink();
+        return !entry.is_regular_file() || entry.is_symlink();
     };
 
     return find_in_filesystem(root, startswith, check_func);
@@ -49,7 +49,7 @@ inline std::optional<std::filesystem::path>
 find_folder(const std::filesystem::path& root, std::string_view startswith)
 {
     CheckFunction check_func = [] (const std::filesystem::directory_entry &entry) {
-        return !entry.is_symlink();
+        return !entry.is_directory();
     };
 
     return find_in_filesystem(root, startswith, check_func);

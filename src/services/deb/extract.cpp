@@ -140,10 +140,8 @@ extract(std::string_view path)
         return {};
     }
 
-    if (try_dpkg_extract(path)) {
-        console::success("Extracted using dpkg");
+    if (try_dpkg_extract(path))
         return std::string {default_path};
-    }
 
     console::warn("dpkg unavailable or failed, using internal extractor");
 

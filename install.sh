@@ -1,113 +1,214 @@
 #!/usr/bin/env bash
 
-set -e
+set -Eeuo pipefail
 
-DEFAULT="\e[0m"
-GREEN="\e[1;32m"
-RED="\e[1;31m"
+readonly RESET='\033[0m'
+readonly GREEN='\033[1;32m'
+readonly RED='\033[1;31m'
+readonly YELLOW='\033[1;33m'
+
+readonly INSTALL_DIR="/usr/local/bin"
+readonly CONFIG_DIR="${HOME}/.config/pwnit"
+readonly BUILD_DIR="build"
+
+log() {
+    echo -e "${GREEN}==>${RESET} $*"
+}
+
+warn() {
+    echo -e "${YELLOW}Warning:${RESET} $*" >&2
+}
+
+error() {
+    echo -e "${RED}Error:${RESET} $*" >&2
+}
+
+die() {
+    error "$*"
+    exit 1
+}
 
 detect_distro() {
-    if [[ -f /etc/os-release ]]; then
-        source /etc/os-release
+    if [[ ! -r /etc/os-release ]]; then
+        echo "unknown"
+        return
+    fi
 
-        case "${ID,,}" in
-            arch|manjaro)
-                echo "arch"
-                ;;
-            debian|ubuntu|linuxmint|pop|elementary)
-                echo "debian"
-                ;;
-            fedora)
-                echo "fedora"
-                ;;
-            rhel|centos|rocky|almalinux)
-                echo "rhel"
-                ;;
-            *)
-                echo "${ID,,}"
-                ;;
-        esac
+    source /etc/os-release
+
+    case "${ID,,}" in
+        arch|manjaro)
+            echo "arch"
+            ;;
+        debian|ubuntu|linuxmint|pop|elementary)
+            echo "debian"
+            ;;
+        fedora)
+            echo "fedora"
+            ;;
+        rhel|centos|rocky|almalinux)
+            echo "rhel"
+            ;;
+        *)
+            echo "${ID,,}"
+            ;;
+    esac
+}
+
+require_sudo() {
+    if [[ $EUID -eq 0 ]]; then
         return 0
     fi
 
-    if [[ -f /etc/debian_version ]]; then
-        echo "debian"
-        return 0
-    fi
+    command -v sudo >/dev/null 2>&1 \
+        || die "sudo is required to install system packages."
 
-    if [[ -f /etc/redhat-release ]]; then
-        echo "rhel"
-        return 0
-    fi
-
-    echo "unknown"
+    sudo -v
 }
 
 install_dependencies() {
     local distro
     distro="$(detect_distro)"
 
-    echo -e "${GREEN}Detected distro: ${distro}${DEFAULT}"
+    log "Detected distro: ${distro}"
 
     case "$distro" in
         arch)
-            sudo pacman -Sy --needed --noconfirm tar patchelf
+            require_sudo
+            sudo pacman -Syu --needed --noconfirm \
+                cmake \
+                gcc \
+                make \
+                tar \
+                patchelf \
+                elfutils
             ;;
 
         debian)
+            require_sudo
             sudo apt-get update
-            sudo apt-get install -y tar patchelf
+            sudo apt-get install -y \
+                cmake \
+                build-essential \
+                tar \
+                patchelf \
+                elfutils
             ;;
 
         fedora)
-            sudo dnf install -y tar patchelf
+            require_sudo
+            sudo dnf install -y \
+                cmake \
+                gcc \
+                gcc-c++ \
+                make \
+                tar \
+                patchelf \
+                elfutils
             ;;
 
         rhel)
+            require_sudo
+
             if command -v dnf >/dev/null 2>&1; then
-                sudo dnf install -y tar patchelf
+                sudo dnf install -y \
+                    cmake \
+                    gcc \
+                    gcc-c++ \
+                    make \
+                    tar \
+                    patchelf \
+                    elfutils
             else
-                sudo yum install -y tar patchelf
+                sudo yum install -y \
+                    cmake \
+                    gcc \
+                    gcc-c++ \
+                    make \
+                    tar \
+                    patchelf \
+                    elfutils
             fi
             ;;
 
         *)
-            echo -e "${RED}Distro not supported: ${distro}${DEFAULT}"
-            exit 1
+            die "Unsupported distribution: ${distro}"
             ;;
     esac
+
+    local required_commands=(
+        cmake
+        make
+        tar
+        patchelf
+        eu-unstrip
+    )
+
+    local cmd
+
+    for cmd in "${required_commands[@]}"; do
+        command -v "$cmd" >/dev/null 2>&1 \
+            || die "Required command not found: ${cmd}"
+    done
 }
 
 compile_pwnit() {
-    echo -e "${GREEN}Compiling pwnit...${DEFAULT}"
+    log "Compiling pwnit..."
 
-    mkdir -p build
-    cmake -S . -B build
-    cmake --build build
+    [[ -f CMakeLists.txt ]] \
+        || die "CMakeLists.txt not found. Run this script from the project root."
+
+    cmake \
+        -S . \
+        -B "$BUILD_DIR" \
+        -DCMAKE_BUILD_TYPE=Release
+
+    cmake \
+        --build "$BUILD_DIR" \
+        --parallel
 }
 
 install_configs() {
-    echo -e "${GREEN}Installing configuration files...${DEFAULT}"
+    log "Installing configuration files..."
 
-    mkdir -p "$HOME/.config/pwnit/templates"
+    [[ -f config/pwnit.toml ]] \
+        || die "Missing configuration file: config/pwnit.toml"
 
-    cp config/pwnit.toml "$HOME/.config/pwnit/"
-    cp config/default.py "$HOME/.config/pwnit/templates/"
+    [[ -f config/default.py ]] \
+        || die "Missing template file: config/default.py"
+
+    install -d "${CONFIG_DIR}/templates"
+
+    install \
+        -m 644 \
+        config/pwnit.toml \
+        "${CONFIG_DIR}/pwnit.toml"
+
+    install \
+        -m 644 \
+        config/default.py \
+        "${CONFIG_DIR}/templates/default.py"
 }
 
 install_binary() {
-    echo -e "${GREEN}Installing pwnit globally...${DEFAULT}"
+    log "Installing pwnit globally..."
 
-    if [[ ! -f pwnit && ! -f build/pwnit ]]; then
-        echo -e "${RED}Binary 'pwnit' not found.${DEFAULT}"
-        exit 1
-    fi
+    local binary
 
-    if [[ -f build/pwnit ]]; then
-        sudo install -m 755 build/pwnit /usr/local/bin/pwnit
+    if [[ -f "${BUILD_DIR}/pwnit" ]]; then
+        binary="${BUILD_DIR}/pwnit"
+    elif [[ -f pwnit ]]; then
+        binary="pwnit"
     else
-        sudo install -m 755 pwnit /usr/local/bin/pwnit
+        die "Binary 'pwnit' not found."
     fi
+
+    require_sudo
+
+    sudo install \
+        -Dm755 \
+        "$binary" \
+        "${INSTALL_DIR}/pwnit"
 }
 
 main() {
@@ -116,7 +217,11 @@ main() {
     install_configs
     install_binary
 
-    echo -e "${GREEN}pwnit installed successfully!${DEFAULT}"
+    echo
+    echo -e "${GREEN}pwnit installed successfully!${RESET}"
+    echo
+    echo "Binary: ${INSTALL_DIR}/pwnit"
+    echo "Config: ${CONFIG_DIR}"
 }
 
-main
+main "$@"
