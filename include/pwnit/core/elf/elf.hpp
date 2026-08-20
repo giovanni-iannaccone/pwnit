@@ -6,8 +6,6 @@
 #include <string>
 #include <vector>
 
-#include <pwnit/core/elf/utils.hpp>
-
 #include <LIEF/ELF.hpp>
 #include <nlohmann/json.hpp>
 
@@ -55,6 +53,30 @@ struct Sections
     decltype(Sections::sections) load(const LIEF::ELF::Binary &binary);
 };
 
+struct SecurityMeasures
+{
+private:
+    uint8_t metadata;
+
+public:
+    SecurityMeasures() = default;
+    SecurityMeasures(const LIEF::ELF::Binary &binary);
+
+    uint8_t canary() const noexcept;
+    uint8_t nx() const noexcept;
+    uint8_t pie() const noexcept;
+    uint8_t relro() const noexcept;
+    uint8_t statical() const noexcept;
+    uint8_t stripped() const noexcept;
+   
+    void set_canary(uint8_t value) noexcept;
+    void set_nx(uint8_t value) noexcept;
+    void set_pie(uint8_t value) noexcept;
+    void set_relro(uint8_t value) noexcept;
+    void set_statical(uint8_t value) noexcept;
+    void set_stripped(uint8_t value) noexcept;
+};
+    
 struct Symbol
 {
     std::string name;
@@ -80,7 +102,7 @@ protected:
     struct Impl;
     std::unique_ptr<Impl> impl;
 
-    uint8_t metadata {};
+    SecurityMeasures secmes;
     
 public:
     bool valid = false;
@@ -116,32 +138,32 @@ public:
     
     uint8_t canary() const noexcept
     {
-        return GET_CANARY(this->metadata);
+        return secmes.canary();
     }
 
     uint8_t nx() const noexcept
     {
-        return GET_NX(this->metadata);
+        return secmes.nx();
     }
 
     uint8_t pie() const noexcept
     {
-        return GET_PIE(this->metadata);
+        return secmes.pie();
     }
 
     uint8_t relro() const noexcept
     {
-        return GET_RELRO(this->metadata);
+        return secmes.relro();
     }
 
     uint8_t stripped() const noexcept
     {
-        return GET_STRIPPED(this->metadata);
+        return secmes.stripped();
     }
 
     uint8_t statical() const noexcept
     {
-        return GET_STATICAL(this->metadata);
+        return secmes.statical();
     }
 
     nlohmann::json to_json() const;
