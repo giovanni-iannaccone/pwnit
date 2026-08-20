@@ -17,9 +17,15 @@ private:
     Config() = default;
 
 public:
+    std::string elf_var_name;
+    std::string libc_var_name;
+    std::string ld_var_name;
+    
     std::string solve_file;
     std::string template_file;
     std::string libc_db;
+    std::string remote;
+    
     toml::array *dangerous_functions;
     
     static Config &instance() noexcept

@@ -2,7 +2,7 @@ from pwn import *
 
 {{ binaries }}
 
-context.binary = exe
+context.binary = {{ elf_var }}
 
 HOST = "addr"
 PORT = 1337
@@ -16,20 +16,20 @@ args.DEBUG = True
 
 def conn():
     if args.LOCAL:
-        r = process(exe.path)
+        {{ remote }} = process(exe.path)
         if args.DEBUG:
-            gdb.attach(r, gdbscript=gdbscript)
+            gdb.attach({{ remote }}, gdbscript=gdbscript)
     else:
-        r = remote(HOST, PORT)
+        {{ remote }} = remote(HOST, PORT)
 
-    return r
+    return {{ remote }}
 
 def main():
-    r = conn()
+    {{ remote }}  = conn()
 
     # good luck pwning :D
 
-    r.interactive()
+    {{ remote }}.interactive()
 
 if __name__ == "__main__":
     main()

@@ -2,7 +2,7 @@
 
 #include <format>
 #include <string>
-
+#include <sys/socket.h>
 #include <unistd.h>
 
 #include <pwnit/commands.hpp>
@@ -37,13 +37,18 @@ struct ContainerClient
 {
     httplib::Client client;
     const std::string container_id;
+
+    ContainerClient(const std::string &sock, const std::string &container_id)
+        : client({std::move(sock)}),
+          container_id(container_id)
+    {
+        client.set_address_family(AF_UNIX);
+    }
     
     std::optional<httplib::Result>
     exec(const std::vector<std::string> &cmd);
-
-    bool getfile(const std::string &file);
     
-    void set_address_family(int fam);
+    bool getfile(const std::string &file);
 };
 
 void extract(const commands::ContainerOptions &opt);

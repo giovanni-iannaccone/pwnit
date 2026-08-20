@@ -16,9 +16,9 @@
 namespace pwnit::templates
 {
 
-constexpr string::fixed elf  = "exe = ELF(\"./{}\", checksec=True)"; 
-constexpr string::fixed libc = "libc = ELF(\"./{}\", checksec=False)";
-constexpr string::fixed ld   = "ld = ELF(\"./{}\", checksec=False)";
+constexpr string::fixed elf  = "{} = ELF(\"./{}\", checksec=True)"; 
+constexpr string::fixed libc = "{} = ELF(\"./{}\", checksec=False)";
+constexpr string::fixed ld   = "{} = ELF(\"./{}\", checksec=False)";
 
 static inline
 std::string ask_solve_file()
@@ -30,27 +30,47 @@ std::string ask_solve_file()
     return solve;
 }
 
-template <string::fixed Fmt> constexpr
-std::string get_binaries_pwntools_decl(const std::filesystem::path &path)
+template <string::fixed Fmt> constexpr std::string
+get_binaries_pwntools_decl(const std::string &varname, const std::filesystem::path &path)
 {
-    return std::format("{}\n", std::format(Fmt, path.filename().string()));
+    return std::format("{}\n", std::format(Fmt, varname, path.filename().string()));
 }
     
 static inline
 std::string format_binaries(const commands::StartOptions &opt)
 {
+    const auto &cfg = config::Config::instance();
     std::string binaries = "";
-
+    
     if (!opt.elf.empty())
-        binaries += get_binaries_pwntools_decl<elf>(opt.elf);
+        binaries +=
+            get_binaries_pwntools_decl<elf>(cfg.elf_var_name, opt.elf);
 
     if (!opt.libc.empty())
-        binaries += get_binaries_pwntools_decl<libc>(opt.libc);
+        binaries +=
+            get_binaries_pwntools_decl<libc>(cfg.libc_var_name, opt.libc);
     
     if (!opt.ld.empty())
-        binaries += get_binaries_pwntools_decl<ld>(opt.ld);
+        binaries +=
+            get_binaries_pwntools_decl<ld>(cfg.ld_var_name, opt.ld);
 
     return binaries;
+}
+
+static inline nlohmann::json
+get_data_for_template(commands::StartOptions &opt)
+{
+    const auto &cfg = config::Config::instance();
+    nlohmann::json data;
+
+    data["binaries"] = format_binaries(opt);
+    data["remote"] = cfg.remote;
+
+    data["elf_var"] = cfg.elf_var_name;
+    data["libc_var"] = cfg.libc_var_name;
+    data["ld_var"] = cfg.ld_var_name;
+
+    return data;
 }
     
 static inline
@@ -65,10 +85,8 @@ std::string parse_template(commands::StartOptions &opt)
     );
 
     std::string py_template = utils::read_whole_file(template_fd);
+    nlohmann::json data = get_data_for_template(opt);
     
-    nlohmann::json data;
-    data["binaries"] = format_binaries(opt);
-
     return inja::render(py_template, data);
 }
 

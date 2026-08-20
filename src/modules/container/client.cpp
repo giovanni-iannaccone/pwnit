@@ -7,7 +7,6 @@
 
 #include <httplib.h>
 #include <nlohmann/json.hpp>
-#include <sys/socket.h>
 
 namespace pwnit::container
 {
@@ -72,9 +71,4 @@ bool ContainerClient::getfile(const std::string &file)
     return true;
 }
     
-void ContainerClient::set_address_family(int fam)
-{
-    return client.set_address_family(fam);
-}
-
 }

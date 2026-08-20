@@ -47,8 +47,9 @@ static std::string get_version(const std::unique_ptr<LIEF::ELF::Binary> &binary)
         for (const auto& aux : definition.symbols_aux()) {
             const std::string& name = aux.name();
             
-            if (name.rfind("GLIBC_", 0) == 0)
-                if (name > highest)
+            if (name.rfind("GLIBC_", 0) == 0
+                && name.find("PRIVATE") == std::string::npos
+                && name > highest)
                     highest = name;
         }
     }

@@ -54,6 +54,19 @@ public:
     explicit ContainerCommand(CLI::App &app);
 };
 
+struct RopOptions {
+    bool json;
+    std::string elf;
+};
+
+class RopCommand
+{
+    RopOptions opt;
+    
+public:
+    explicit RopCommand(CLI::App &app);
+};
+    
 struct StartOptions {
     std::string elf;
     std::string libc;

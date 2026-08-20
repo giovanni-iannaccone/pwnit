@@ -1,3 +1,11 @@
+elf_var_name = "exe"
+libc_var_name = "libc"
+ld_var_name = "ld"
+
+remote = "r"
+
+import_everything = true
+
 solve_file = "solve.py"
 template_file = "/home/giovanni/.config/pwnit/templates/default.py"
 libc_db = "https://libc.rip"

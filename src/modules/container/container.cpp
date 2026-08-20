@@ -81,14 +81,12 @@ int find_process_pid(ContainerClient &client, uint16_t port)
 static 
 ContainerClient initialize_client(const commands::ContainerOptions &opt)
 {
-    std::string sock = (opt.type == commands::ContainerType::DOCKER)
-        ? docker::get_socket()
-        : podman::get_socket();
-
-    ContainerClient client {httplib::Client (sock), opt.container_id};
-    client.set_address_family(AF_UNIX);
-
-    return client;
+    return {
+        (opt.type == commands::ContainerType::DOCKER)
+        	? docker::get_socket()
+        	: podman::get_socket(),
+        opt.container_id
+    };
 }
 
 void extract(const commands::ContainerOptions &opt)
