@@ -1,9 +1,9 @@
-#include "LIEF/ELF/Header.hpp"
-#include "capstone/capstone.h"
 #include <pwnit/core/elf/elf.hpp>
 #include <pwnit/utils/assert.hpp>
 
+#include <capstone/capstone.h>
 #include <LIEF/ELF.hpp>
+#include <LIEF/ELF/Header.hpp>
 
 namespace pwnit::elf
 {
@@ -59,7 +59,23 @@ Elf::get_section(const std::string &name) const
     const auto sec = binary.get_section(name);
     Section section {sec};
 
-    return {section, sec->content()};
+    return {std::move(section), sec->content()};
+}
+
+std::pair<Symbol, const std::span<const uint8_t>>
+Elf::get_symbol(const std::string &name) const
+{
+    const auto &binary = *this->impl->binary;
+    if (!binary.has_symbol(name))
+        return {};
+
+    const auto sym = binary.get_symbol(name);
+    Symbol symbol {sym};
+
+    auto content =
+        binary.get_content_from_virtual_address(sym->value(), sym->size());
+
+    return {std::move(symbol), content};
 }
     
 bool Elf::has_symbol(const std::string& name) const

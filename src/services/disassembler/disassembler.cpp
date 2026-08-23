@@ -1,24 +1,22 @@
-#pragma once
-
 #include <cstdint>
 #include <span>
 #include <vector>
 
 #include <pwnit/core/elf/elf.hpp>
+#include <pwnit/services/disassembler/disassembler.hpp>
 #include <pwnit/utils/assert.hpp>
 
 #include <capstone/capstone.h>
 
 namespace pwnit::disassembler
 {
-
+    
 std::vector<cs_insn>
 disass(
-    const elf::Section &sec,
     const std::span<const uint8_t> &code,
+    uint64_t address,
     cs_arch arch, cs_mode mode
 ) {
-    
     csh handle;
     
     assert::fail(
@@ -26,9 +24,10 @@ disass(
         "Capstone initialization failed"
     );
         
+    cs_option(handle, CS_OPT_DETAIL, CS_OPT_ON);
+
     const uint8_t* ptr = code.data();
     size_t size = code.size();
-    uint64_t current_address = sec.address;
     
     cs_insn* insn = cs_malloc(handle);
     std::vector<cs_insn> instructions;
@@ -39,8 +38,8 @@ disass(
         return {};
     }
 
-    while (cs_disasm_iter(handle, &ptr, &size, &current_address, insn))
-        instructions.push_back(*insn);
+    while (cs_disasm_iter(handle, &ptr, &size, &address, insn))
+        instructions.emplace_back(*insn);
 
     cs_free(insn, 1);
     cs_close(&handle);

@@ -1,6 +1,5 @@
 #pragma once
 
-#include "LIEF/ELF/Section.hpp"
 #include <cstdint>
 #include <filesystem>
 #include <memory>
@@ -9,6 +8,7 @@
 
 #include <capstone/capstone.h>
 #include <LIEF/ELF.hpp>
+#include <LIEF/ELF/Section.hpp>
 #include <nlohmann/json.hpp>
 
 namespace pwnit::elf
@@ -38,6 +38,8 @@ constexpr std::string_view to_string(RELRO relro)
 struct Arch
 {
     uint8_t value {};
+
+    operator cs_arch() const;    
     const char *to_string() const;
 };
     
@@ -58,6 +60,16 @@ struct Sections
 {
     std::vector<Section> sections;
     decltype(Sections::sections) load(const LIEF::ELF::Binary &binary);
+
+    auto begin()
+    {
+        return sections.begin();
+    }
+
+    auto end()
+    {
+        return sections.end();
+    }
 };
 
 struct SecurityMeasures
@@ -89,12 +101,27 @@ struct Symbol
     std::string name;
     uint64_t address {};
     uint64_t size {};
+
+    Symbol() = default;
+    
+    Symbol(const LIEF::Symbol * const sym) noexcept; 
+    Symbol(const LIEF::Symbol &sym) noexcept;
 };
 
 struct Symbols
 {
     std::vector<Symbol> symbols;
     decltype(Symbols::symbols) load(const LIEF::ELF::Binary &binary);
+
+    auto begin()
+    {
+        return symbols.begin();
+    }
+
+    auto end()
+    {
+        return symbols.end();
+    }
 };
 
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(Arch, value)
@@ -140,6 +167,9 @@ public:
 
     std::pair<Section, const std::span<const uint8_t>>
     get_section(const std::string &name) const;
+
+    std::pair<Symbol, const std::span<const uint8_t>>
+    get_symbol(const std::string &name) const;
 
     cs_mode elf_class() const;
     

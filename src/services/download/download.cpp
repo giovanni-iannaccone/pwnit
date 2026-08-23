@@ -106,7 +106,7 @@ unstrip_libc(const std::string &build_id, std::string &url)
     }
 
     system::run(
-        std::format("eu-unstrip {} {}", std::string {libc_so}, symbols.value())
+        "eu-unstrip {} {}", std::string {libc_so}, symbols.value()
     );
 
     return std::string {libc_so};

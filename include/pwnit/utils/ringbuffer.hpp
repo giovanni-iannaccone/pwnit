@@ -1,26 +1,28 @@
 #pragma once
 
-#include <vector>
+#include <cstddef>
 #include <utility>
+#include <vector>
 
 namespace pwnit::utils
 {
-    
+
 template <typename T>
 class RingBuffer
 {
 private:
     std::vector<T> data_;
-    int capacity_;
-    int head_;
-    int size_;
+    std::size_t capacity_;
+    std::size_t head_;
+    std::size_t size_;
 
 public:
-    explicit RingBuffer(int capacity)
+    explicit RingBuffer(std::size_t capacity)
         : data_(capacity),
           capacity_(capacity),
           head_(0),
-          size_(0) {}
+          size_(0)
+    {}
 
     T& operator[](std::size_t index) noexcept
     {
@@ -32,38 +34,28 @@ public:
         return data_[(head_ + index) % capacity_];
     }
 
-    void push(const T& value) noexcept
+    template <typename U>
+    requires std::assignable_from<T&, U&&>
+    void push(U&& value)
+        noexcept(std::is_nothrow_assignable_v<T&, U&&>)
     {
         if (capacity_ == 0)
             return;
 
-        data_[(head_ + size_) % capacity_] = value;
+        data_[(head_ + size_) % capacity_] = std::forward<U>(value);
 
         if (size_ < capacity_)
-            size_++;
-        else
-            head_ = (head_ + 1) % capacity_;
-    }
-
-    void push(T&& value) noexcept
-    {
-        if (capacity_ == 0)
-            return;
-
-        data_[(head_ + size_) % capacity_] = std::move(value);
-
-        if (size_ < capacity_)
-            size_++;
+            ++size_;
         else
             head_ = (head_ + 1) % capacity_;
     }
 
     void pop() noexcept
     {
-        if (capacity_ == 0)
+        if (size_ == 0)
             return;
 
-        size_--;
+        --size_;
         head_ = (head_ + 1) % capacity_;
     }
 
@@ -87,12 +79,12 @@ public:
         return data_[(head_ + size_ - 1) % capacity_];
     }
 
-    int size() const noexcept
+    std::size_t size() const noexcept
     {
         return size_;
     }
 
-    int capacity() const noexcept
+    std::size_t capacity() const noexcept
     {
         return capacity_;
     }
@@ -100,9 +92,9 @@ public:
     void clear() noexcept
     {
         size_ = 0;
-        data_.clear();
+        head_ = 0;
     }
-    
+
     bool empty() const noexcept
     {
         return size_ == 0;
@@ -113,7 +105,8 @@ public:
         return size_ == capacity_;
     }
 
-    class iterator {
+    class iterator
+    {
     public:
         iterator(RingBuffer* buffer, std::size_t index)
             : buffer_(buffer), index_(index)
@@ -139,7 +132,7 @@ public:
         RingBuffer* buffer_;
         std::size_t index_;
     };
-    
+
     iterator begin() noexcept
     {
         return iterator(this, 0);
@@ -150,5 +143,5 @@ public:
         return iterator(this, size_);
     }
 };
-    
+
 }

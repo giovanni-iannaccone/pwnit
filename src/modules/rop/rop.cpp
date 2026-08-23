@@ -7,7 +7,6 @@
 #include <rop/rop.hpp>
 
 #include <capstone/arm.h>
-#include <capstone/arm64.h>
 #include <capstone/capstone.h>
 #include <capstone/mips.h>
 #include <capstone/riscv.h>
@@ -27,7 +26,9 @@ bool is_x86_ret(const cs_insn& instr)
 static
 bool is_arm_ret(const cs_insn& instr)
 {
-    return instr.id == ARM64_INS_RET;
+    return instr.id == ARM_INS_BX &&
+           instr.detail->arm.operands[0].type == ARM_OP_REG &&
+           instr.detail->arm.operands[0].reg == ARM_REG_LR;
 }
 
 static
@@ -57,48 +58,34 @@ IsRet get_is_ret(cs_arch arch)
     	{ return false; };
 }
 
+using IBuffer = utils::RingBuffer<cs_insn>;
+    
 static
-cs_arch setup_arch(LIEF::ELF::ARCH arch)
-{
-    switch (arch) {
-        case LIEF::ELF::ARCH::I386:
-            return CS_ARCH_X86;
-
-        case LIEF::ELF::ARCH::X86_64:
-            return CS_ARCH_X86;
-
-        case LIEF::ELF::ARCH::ARM:
-            return CS_ARCH_ARM;
-
-        case LIEF::ELF::ARCH::AARCH64:
-            return CS_ARCH_ARM64;
-
-        default:
-            assert::fail(false, "Unsupported architecture");
-    }
-
-    return CS_ARCH_ALL;
-}
-
-static
-void print_gadget(utils::RingBuffer<cs_insn> &gadget)
+void print_gadget(IBuffer &gadget)
 {
     while (!gadget.empty()) {
-        std::string gadget_str = std::format("{:#x}: ", gadget.front().address);
+        std::string gadget_str;
         
         for (const auto &instr: gadget)
-            gadget_str += std::string {instr.mnemonic} + "; ";
+            gadget_str += std::format("{} {}; ", instr.mnemonic, instr.op_str);
         
+        const std::string header =
+            std::format("{:#x}: ", gadget.front().address);
+
         gadget.pop();
-        console::success("{}", gadget_str);
+        console::message(
+            header, "{}", gadget_str
+        );
     }
 }
-
+    
 static
 void print_filtered_gadgets(
-    const std::vector<cs_insn> &instructions, int depth, const std::string &search, const IsRet &isret
+    const std::vector<cs_insn> &instructions, int depth,
+    const std::string &search, const IsRet &isret
 ) {
-    utils::RingBuffer<cs_insn> gadget {depth};
+    IBuffer gadget {static_cast<size_t>(depth)};
+
     int found = 0;
     
     for (const auto &instr: instructions) {
@@ -120,9 +107,10 @@ void print_filtered_gadgets(
 }
 
 static
-void print_gadgets(const std::vector<cs_insn> &instructions, int depth, const IsRet &isret)
-{
-    utils::RingBuffer<cs_insn> gadget {depth};
+void print_gadgets(
+    const std::vector<cs_insn> &instructions, int depth, const IsRet &isret
+) {
+    IBuffer gadget {static_cast<size_t>(depth)};
     
     for (const auto &instr: instructions) {
         gadget.push(instr);
@@ -136,10 +124,9 @@ void gadgets(commands::RopOptions &opt)
     auto &&e = elf::Elf(opt.elf);
     const auto && [section, content] = e.get_section(".text");
     
-    const auto arch = setup_arch(LIEF::ELF::ARCH(e.arch.value));
-    const auto instructions = disassembler::disass(section, content, arch, e.elf_class());
+    const auto instructions = disassembler::disass(content, section.address, e.arch, e.elf_class());
 
-    const IsRet &is_ret = get_is_ret(arch);
+    const IsRet &is_ret = get_is_ret(e.arch);
     if (opt.search.empty())
         print_gadgets(instructions, opt.depth, is_ret);
     else

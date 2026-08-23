@@ -77,7 +77,7 @@ bool extract_data_tar()
     }
 
     const auto result = system::run(
-        "tar -xf " + data_filename + " -C " + std::string {default_path}
+		"tar -xf {} -C {} ", data_filename, std::string {default_path}
     );
 
     if (!result) {
@@ -124,7 +124,7 @@ static bool
 try_dpkg_extract(std::string_view deb)
 {
     const auto result = system::run(
-        "dpkg --extract " + std::string {deb} + " " + std::string {default_path}
+        "dpkg --extract {} {}", std::string {deb}, std::string {default_path}
     );
 
     return result && *result == 0;

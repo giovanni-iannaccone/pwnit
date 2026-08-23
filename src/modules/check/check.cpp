@@ -7,7 +7,8 @@
 namespace pwnit::checksec
 {
     
-static void handle_json(elf::Elf &e, bool sections, bool symbols)
+static inline
+void handle_json(elf::Elf &e, bool sections, bool symbols)
 {
     if (sections)
         e.load_sections();
@@ -17,8 +18,9 @@ static void handle_json(elf::Elf &e, bool sections, bool symbols)
 
     console::log("{}", e.to_json().dump(4));
 }
-    
-static inline void print_generic_data(elf::Elf &e)
+
+static inline
+void print_generic_data(const elf::Elf &e)
 {
     console::log("Arch: {}\t{}\tLinking: {}",
         e.arch.to_string(),
@@ -29,7 +31,8 @@ static inline void print_generic_data(elf::Elf &e)
     console::success("Entry point: {:#x}", e.entry);
 }
 
-static inline void print_elf_sec_measures(elf::Elf &e)
+static inline
+void print_elf_sec_measures(const elf::Elf &e)
 {
     if (e.nx())
         console::success("NX enabled");
@@ -63,13 +66,15 @@ static inline void print_elf_sec_measures(elf::Elf &e)
     console::log("");
 }
 
-static inline void print_section(elf::Section &sec)
+static inline
+void print_section(const elf::Section &sec)
 {
     console::success("{}:", sec.name);
     console::log("\taddr: {:#x}\toffset: {}\tsize: {}\n", sec.address, sec.offset, sec.size);
 }
 
-static inline void print_sections(elf::Elf &e)
+static inline
+void print_sections(elf::Elf &e)
 {
     console::info("SECTIONS:");
     
@@ -77,13 +82,15 @@ static inline void print_sections(elf::Elf &e)
         print_section(sec);
 }
 
-static inline void print_symbol(elf::Symbol &sym)
+static inline
+void print_symbol(const elf::Symbol &sym)
 {
     console::success("{}:", sym.name);
     console::log("\taddr: {:#x}\tsize: {}\n", sym.address, sym.size);
 }
 
-static inline void print_symbols(elf::Elf &e)
+static inline
+void print_symbols(elf::Elf &e)
 {
     console::info("SYMBOLS:");
     

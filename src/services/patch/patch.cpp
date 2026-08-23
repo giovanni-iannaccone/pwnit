@@ -15,7 +15,7 @@ void set_interpreter(const std::string &output, const std::string &ld)
 {
     if (!ld.empty()) {
         auto result = system::run(
-        	std::format("patchelf --set-interpreter {} {}", ld, output)
+            "patchelf --set-interpreter {} {}", ld, output
     	);
 
         if (!result && *result != 0)
@@ -28,7 +28,7 @@ void set_rpath(const std::string &output, const std::string &libc)
 {
     if (!libc.empty()) {
         auto result = system::run(
-            std::format("patchelf --set-rpath . {}", output)
+            "patchelf --set-rpath . {}", output
         );
 
         if (!result && *result != 0)
