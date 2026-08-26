@@ -4,71 +4,55 @@
 #include <pwnit/utils/assert.hpp>
 #include <pwnit/utils/console.hpp>
 #include <pwnit/utils/ringbuffer.hpp>
-#include <rop/rop.hpp>
 
-#include <capstone/arm.h>
-#include <capstone/capstone.h>
-#include <capstone/mips.h>
-#include <capstone/riscv.h>
-#include <capstone/x86.h>
+#include <rop/rop.hpp>
+#include <rop/utils.hpp>
 
 namespace pwnit::rop
 {
 
-using IsRet = bool (*)(const cs_insn&);
+using IBuffer = utils::RingBuffer<cs_insn>;
 
 static
-bool is_x86_ret(const cs_insn& instr)
-{
-    return instr.id == X86_INS_RET;
+bool contains_instruction(
+    const std::vector<cs_insn> &instructions,
+    size_t begin, size_t end,
+    const std::string &search
+) {
+    for (size_t i = begin; i <= end; i++)
+        if (std::string{instructions[i].mnemonic}.contains(search))
+            return true;
+
+    return false;
 }
 
 static
-bool is_arm_ret(const cs_insn& instr)
+void print_gadget(IBuffer &gadget, bool only_first = false)
 {
-    return instr.id == ARM_INS_BX &&
-           instr.detail->arm.operands[0].type == ARM_OP_REG &&
-           instr.detail->arm.operands[0].reg == ARM_REG_LR;
-}
+    if (gadget.empty())
+        return;
 
-static
-bool is_arm64_ret(const cs_insn& instr)
-{
-    return instr.id == ARM64_INS_RET;
-}
+    if (only_first) {
+        std::string gadget_str;
 
-static
-IsRet get_is_ret(cs_arch arch)
-{
-    switch (arch) {
-    case CS_ARCH_X86:
-        return is_x86_ret;
-        
-    case CS_ARCH_ARM:
-        return is_arm_ret;
-        
-    case CS_ARCH_ARM64:
-        return is_arm64_ret;
-        
-    default:
-        assert::fail(false, "Unsupported architecture");
+        for (const auto &instr : gadget)
+            gadget_str += std::format("{} {}; ", instr.mnemonic, instr.op_str);
+
+        const std::string header =
+            std::format("{:#x}: ", gadget.front().address);
+
+        console::message(
+            header, "{}", gadget_str
+        );
+        return;
     }
 
-    return [] (const cs_insn &_)
-    	{ return false; };
-}
-
-using IBuffer = utils::RingBuffer<cs_insn>;
-    
-static
-void print_gadget(IBuffer &gadget)
-{
     while (!gadget.empty()) {
         std::string gadget_str;
-        
-        for (const auto &instr: gadget)
+
+        for (const auto &instr : gadget)
             gadget_str += std::format("{} {}; ", instr.mnemonic, instr.op_str);
-        
+
         const std::string header =
             std::format("{:#x}: ", gadget.front().address);
 
@@ -78,59 +62,81 @@ void print_gadget(IBuffer &gadget)
         );
     }
 }
-    
+
 static
-void print_filtered_gadgets(
-    const std::vector<cs_insn> &instructions, int depth,
-    const std::string &search, const IsRet &isret
+void print_gadget(
+    const std::vector<cs_insn> &instructions,
+    size_t begin, size_t end,
+    bool only_first = false
 ) {
-    IBuffer gadget {static_cast<size_t>(depth)};
+    IBuffer gadget {end - begin + 1};
 
-    int found = 0;
-    
-    for (const auto &instr: instructions) {
+    for (size_t i = begin; i <= end; i++)
+        gadget.push(instructions[i]);
 
-        if (std::string{instr.mnemonic}.contains(search)) {
-            found = depth;
-            gadget.push(instr);
-            continue;
-        }
-        
-        if (found == 0)
-            continue;
-        
-        found--;        
-        gadget.push(instr);
-        if (isret(instr))
-            print_gadget(gadget);
-    }
+    print_gadget(gadget, only_first);
 }
 
 static
 void print_gadgets(
     const std::vector<cs_insn> &instructions, int depth, const IsRet &isret
 ) {
-    IBuffer gadget {static_cast<size_t>(depth)};
-    
-    for (const auto &instr: instructions) {
-        gadget.push(instr);
-        if (isret(instr))
-            print_gadget(gadget);
+    for (size_t ret = 0; ret < instructions.size(); ret++) {
+        if (!isret(instructions[ret]))
+            continue;
+
+        const size_t first =
+            ret >= static_cast<size_t>(depth - 1)
+                ? ret - static_cast<size_t>(depth - 1)
+                : 0;
+
+        for (size_t begin = first; begin <= ret; begin++)
+            print_gadget(instructions, begin, ret);
     }
 }
-    
+
+static
+void print_filtered_gadgets(
+    const std::vector<cs_insn> &instructions, int depth,
+    const std::string &search, const IsRet &isret
+) {
+    for (size_t ret = 0; ret < instructions.size(); ret++) {
+        if (!isret(instructions[ret]))
+            continue;
+
+        const size_t first =
+            ret >= static_cast<size_t>(depth - 1)
+                ? ret - static_cast<size_t>(depth - 1)
+                : 0;
+
+        for (size_t begin = first; begin <= ret; begin++) {
+            if (std::string{instructions[begin].mnemonic} != search)
+                continue;
+
+            print_gadget(instructions, begin, ret, true);
+        }
+    }
+}
+
 void gadgets(commands::RopOptions &opt)
 {
     auto &&e = elf::Elf(opt.elf);
     const auto && [section, content] = e.get_section(".text");
     
-    const auto instructions = disassembler::disass(content, section.address, e.arch, e.elf_class());
+    const auto instructions =
+        disassembler::disass(
+            content, section.address,
+            e.arch, e.elf_class()
+        );
 
     const IsRet &is_ret = get_is_ret(e.arch);
+
     if (opt.search.empty())
         print_gadgets(instructions, opt.depth, is_ret);
     else
-        print_filtered_gadgets(instructions, opt.depth, opt.search, is_ret);
+        print_filtered_gadgets(
+            instructions, opt.depth, opt.search, is_ret
+        );
 }
 
 }

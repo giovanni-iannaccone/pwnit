@@ -10,6 +10,20 @@
 
 namespace pwnit::disassembler
 {
+
+static inline
+csh init_handle(cs_arch arch, cs_mode mode)
+{
+    csh handle;
+    
+    assert::fail(
+        cs_open(arch, mode, &handle) == CS_ERR_OK,
+        "Capstone initialization failed"
+    );
+        
+    cs_option(handle, CS_OPT_DETAIL, CS_OPT_ON);
+    return handle;
+}
     
 std::vector<cs_insn>
 disass(
@@ -17,15 +31,9 @@ disass(
     uint64_t address,
     cs_arch arch, cs_mode mode
 ) {
-    csh handle;
-    
-    assert::fail(
-    	cs_open(arch, mode, &handle) == CS_ERR_OK,
-        "Capstone initialization failed"
-    );
-        
-    cs_option(handle, CS_OPT_DETAIL, CS_OPT_ON);
 
+    csh handle = init_handle(arch, mode);
+    
     const uint8_t* ptr = code.data();
     size_t size = code.size();
     
