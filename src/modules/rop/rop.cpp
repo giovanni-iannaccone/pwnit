@@ -1,142 +1,243 @@
+#include <algorithm>
+#include <cstdint>
+#include <format>
+#include <mutex>
+#include <span>
+#include <string>
+#include <string_view>
+#include <unordered_set>
+#include <utility>
+#include <vector>
+
 #include <pwnit/commands.hpp>
 #include <pwnit/core/elf/elf.hpp>
 #include <pwnit/services/disassembler/disassembler.hpp>
-#include <pwnit/utils/assert.hpp>
 #include <pwnit/utils/console.hpp>
-#include <pwnit/utils/ringbuffer.hpp>
 
 #include <rop/rop.hpp>
 #include <rop/utils.hpp>
 
+#include <BS_thread_pool.hpp>
+
 namespace pwnit::rop
 {
 
-using IBuffer = utils::RingBuffer<cs_insn>;
+struct GadgetFilter
+{
+    std::string_view mnemonic;
+    std::string_view operands;
+};
+
+struct ScanContext
+{
+    std::span<const uint8_t> content;
+    uint64_t address;
+    int depth;
+    int max_bytes;
+    cs_arch arch;
+    cs_mode mode;
+    const IsEnding &is_ending;
+    const GadgetFilter &filter;
+};
+
+using Gadget = std::vector<cs_insn>;
+using Gadgets = std::vector<Gadget>;
 
 static
-bool contains_instruction(
-    const std::vector<cs_insn> &instructions,
-    size_t begin, size_t end,
-    const std::string &search
-) {
-    for (size_t i = begin; i <= end; i++)
-        if (std::string{instructions[i].mnemonic}.contains(search))
-            return true;
+GadgetFilter parse_filter(const std::string &search)
+{
+    const std::string_view value{search};
 
-    return false;
+    const auto first = value.find_first_not_of(" \t");
+    if (first == std::string_view::npos)
+        return {};
+
+    const auto last = value.find_last_not_of(" \t");
+    const auto trimmed = value.substr(first, last - first + 1);
+
+    const auto separator = trimmed.find_first_of(" \t");
+
+    if (separator == std::string_view::npos)
+        return {trimmed, {}};
+
+    const auto operands = trimmed.find_first_not_of(" \t", separator);
+
+    if (operands == std::string_view::npos)
+        return {trimmed.substr(0, separator), {}};
+
+    return {
+        trimmed.substr(0, separator),
+        trimmed.substr(operands)
+    };
 }
 
 static
-void print_gadget(IBuffer &gadget, bool only_first = false)
+bool matches(
+    const cs_insn &instruction,
+    const GadgetFilter &filter
+) {
+    if (filter.mnemonic.empty())
+        return true;
+
+    if (filter.mnemonic != instruction.mnemonic)
+        return false;
+
+    return filter.operands.empty() ||
+           filter.operands == instruction.op_str;
+}
+
+static
+std::string gadget_text(std::span<const cs_insn> instructions)
 {
-    if (gadget.empty())
-        return;
+    std::string text;
 
-    if (only_first) {
-        std::string gadget_str;
+    for (const auto &instruction : instructions) {
+        if (!text.empty())
+            text += "; ";
 
-        for (const auto &instr : gadget)
-            gadget_str += std::format("{} {}; ", instr.mnemonic, instr.op_str);
+        text += instruction.mnemonic;
 
-        const std::string header =
-            std::format("{:#x}: ", gadget.front().address);
-
-        console::message(
-            header, "{}", gadget_str
-        );
-        return;
+        if (instruction.op_str[0] != '\0') {
+            text += ' ';
+            text += instruction.op_str;
+        }
     }
 
-    while (!gadget.empty()) {
-        std::string gadget_str;
-
-        for (const auto &instr : gadget)
-            gadget_str += std::format("{} {}; ", instr.mnemonic, instr.op_str);
-
-        const std::string header =
-            std::format("{:#x}: ", gadget.front().address);
-
-        gadget.pop();
-        console::message(
-            header, "{}", gadget_str
-        );
-    }
+    return text;
 }
 
 static
 void print_gadget(
-    const std::vector<cs_insn> &instructions,
-    size_t begin, size_t end,
-    bool only_first = false
+    std::span<const cs_insn> instructions,
+    std::unordered_set<std::string> &seen
 ) {
-    IBuffer gadget {end - begin + 1};
+    if (instructions.empty())
+        return;
 
-    for (size_t i = begin; i <= end; i++)
-        gadget.push(instructions[i]);
+    const auto text = gadget_text(instructions);
 
-    print_gadget(gadget, only_first);
+    if (!seen.insert(text).second)
+        return;
+
+    const auto header =
+        std::format("{:#x}: ", instructions.front().address);
+
+    console::message(header, "{}", text);
 }
 
 static
-void print_gadgets(
-    const std::vector<cs_insn> &instructions, int depth, const IsRet &isret
+void scan_start(
+    const ScanContext &context,
+    int start, Gadgets &results
 ) {
-    for (size_t ret = 0; ret < instructions.size(); ret++) {
-        if (!isret(instructions[ret]))
-            continue;
+    const int content_size =
+        static_cast<int>(context.content.size());
 
-        const size_t first =
-            ret >= static_cast<size_t>(depth - 1)
-                ? ret - static_cast<size_t>(depth - 1)
-                : 0;
+    const int remaining = content_size - start;
+    const int length = std::min(remaining, context.max_bytes);
 
-        for (size_t begin = first; begin <= ret; begin++)
-            print_gadget(instructions, begin, ret);
-    }
-}
+    const auto decoded = disassembler::disass(
+        context.content.subspan(start, length),
+        context.address + start,
+        context.arch,
+        context.mode
+    );
 
-static
-void print_filtered_gadgets(
-    const std::vector<cs_insn> &instructions, int depth,
-    const std::string &search, const IsRet &isret
-) {
-    for (size_t ret = 0; ret < instructions.size(); ret++) {
-        if (!isret(instructions[ret]))
-            continue;
+    if (decoded.empty())
+        return;
 
-        const size_t first =
-            ret >= static_cast<size_t>(depth - 1)
-                ? ret - static_cast<size_t>(depth - 1)
-                : 0;
+    if (!matches(decoded.front(), context.filter))
+        return;
 
-        for (size_t begin = first; begin <= ret; begin++) {
-            if (std::string{instructions[begin].mnemonic} != search)
-                continue;
+    Gadget gadget;
+    gadget.reserve(context.depth);
 
-            print_gadget(instructions, begin, ret, true);
+    for (const auto &instruction : decoded) {
+        if (static_cast<int>(gadget.size()) >= context.depth)
+            break;
+
+        if (!gadget.empty()) {
+            const auto &previous = gadget.back();
+
+            if (instruction.address !=
+                previous.address + previous.size)
+                break;
+        }
+
+        gadget.push_back(instruction);
+
+        if (context.is_ending(instruction)) {
+            results.push_back(std::move(gadget));
+            return;
         }
     }
 }
 
+static
+Gadgets scan_block(
+    const ScanContext &context,
+    int begin,
+    int end
+) {
+    Gadgets results;
+
+    for (int start = begin; start < end; ++start)
+        scan_start(context, start, results);
+
+    return results;
+}
+
+static
+void scan(const ScanContext &context)
+{
+    BS::thread_pool pool;
+
+    std::mutex mutex;
+    Gadgets results;
+
+    pool.detach_blocks(
+        0,
+        static_cast<int>(context.content.size()),
+        [&](int begin, int end) {
+            auto local = scan_block(context, begin, end);
+
+            std::lock_guard lock(mutex);
+
+            for (auto &gadget : local)
+                results.push_back(std::move(gadget));
+        }
+    );
+
+    pool.wait();
+
+    std::unordered_set<std::string> seen;
+
+    for (const auto &gadget : results)
+        print_gadget(gadget, seen);
+}
+
 void gadgets(commands::RopOptions &opt)
 {
-    auto &&e = elf::Elf(opt.elf);
-    const auto && [section, content] = e.get_section(".text");
-    
-    const auto instructions =
-        disassembler::disass(
-            content, section.address,
-            e.arch, e.elf_class()
-        );
+    auto e = elf::Elf(opt.elf);
+    const auto &[section, content] = e.get_section(".text");
 
-    const IsRet &is_ret = get_is_ret(e.arch);
+    constexpr int max_instruction_size = 15;
 
-    if (opt.search.empty())
-        print_gadgets(instructions, opt.depth, is_ret);
-    else
-        print_filtered_gadgets(
-            instructions, opt.depth, opt.search, is_ret
-        );
+    const GadgetFilter filter = parse_filter(opt.search);
+    const IsEnding &is_ending = get_is_ending(e.arch);
+
+    const ScanContext context{
+        .content = content,
+        .address = section.address,
+        .depth = opt.depth,
+        .max_bytes = opt.depth * max_instruction_size,
+        .arch = e.arch,
+        .mode = e.elf_class(),
+        .is_ending = is_ending,
+        .filter = filter
+    };
+
+    scan(context);
 }
 
 }

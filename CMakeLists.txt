@@ -22,6 +22,15 @@ set(LIEF_EXAMPLES OFF CACHE BOOL "" FORCE)
 set(LIEF_TESTS OFF CACHE BOOL "" FORCE)
 
 FetchContent_Declare(
+    thread_pool
+    GIT_REPOSITORY https://github.com/bshoshany/thread-pool.git
+    GIT_TAG v5.1.0
+    GIT_SHALLOW TRUE
+)
+
+FetchContent_MakeAvailable(thread_pool)
+
+FetchContent_Declare(
     httplib
     GIT_REPOSITORY https://github.com/yhirose/cpp-httplib.git
     GIT_TAG v0.23.0
@@ -61,19 +70,21 @@ set(BUILD_TESTING OFF CACHE BOOL "Disable tests" FORCE)
 set(BUILD_BENCHMARK OFF CACHE BOOL "Disable benchmarks" FORCE)
 
 FetchContent_Declare(
+    nlohmann_json
+    URL https://github.com/nlohmann/json/releases/download/v3.12.0/json.tar.xz
+)
+
+FetchContent_MakeAvailable(nlohmann_json)
+
+set(INJA_USE_EMBEDDED_JSON OFF CACHE BOOL "" FORCE)
+
+FetchContent_Declare(
     inja
     GIT_REPOSITORY https://github.com/pantor/inja.git
     GIT_TAG v3.4.0
 )
 
 FetchContent_MakeAvailable(inja)
-
-FetchContent_Declare(
-    nlohmann_json
-    URL https://github.com/nlohmann/json/releases/download/v3.12.0/json.tar.xz
-)
-
-FetchContent_MakeAvailable(nlohmann_json)
 
 FetchContent_Declare(
     tomlplusplus
@@ -102,8 +113,6 @@ FetchContent_Declare(
 
 FetchContent_MakeAvailable(spdlog)
 
-find_package(CURL REQUIRED)
-
 file(GLOB_RECURSE SOURCES
     CONFIGURE_DEPENDS
     "${PROJECT_SOURCE_DIR}/src/*.cpp"
@@ -115,7 +124,7 @@ target_include_directories(pwnit
     PRIVATE
         ${PROJECT_SOURCE_DIR}/include
         ${PROJECT_SOURCE_DIR}/src/modules
-        ${libarchive_SOURCE_DIR}/libarchive
+        ${thread_pool_SOURCE_DIR}/include
 )
 
 target_link_libraries(pwnit
