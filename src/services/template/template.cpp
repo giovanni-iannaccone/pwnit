@@ -34,7 +34,7 @@ std::string ask_solve_file()
 template <string::fixed Fmt> constexpr std::string
 get_binaries_pwntools_decl(const std::string &varname, const std::filesystem::path &path)
 {
-    return std::format("{}\n", std::format(Fmt, varname, path.filename().string()));
+    return std::format("{}", std::format(Fmt, varname, path.filename().string()));
 }
     
 static inline

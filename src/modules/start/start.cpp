@@ -36,6 +36,20 @@ bool need_different_loader(commands::StartOptions &opt)
     return !opt.libc.empty() && opt.ld.empty();
 }
 
+static inline
+void update_binaries(commands::StartOptions &opt)
+{
+    const auto lib = libc::identify(opt.libc);
+    lib.print_debug_info();
+    
+    if (need_different_loader(opt)
+        && download_from_libcdb(lib, opt)) {
+        
+        opt.elf = patch::patchelf(opt);
+        console::success("Created {}", opt.elf);
+    }
+}
+    
 void start(commands::StartOptions &opt)
 {
     find_binaries(opt);
@@ -44,21 +58,14 @@ void start(commands::StartOptions &opt)
     assert::fail(!opt.elf.empty(), "Could not find target ELF");
     
     if (opt.libc.empty())
-        return;
+        goto template_write;
+
+    update_binaries(opt);
     
-    const auto lib = libc::identify(opt.libc);
-    lib.print_debug_info();
-
-    if (need_different_loader(opt)
-        && download_from_libcdb(lib, opt)) {
-
-        opt.elf = patch::patchelf(opt);
-        console::success("Created {}", opt.elf);
-    }
-
     utils::give_exec_permission(opt.elf);
     utils::give_exec_permission(opt.ld);
 
+template_write:
     templates::write_solve(opt);
 }
     

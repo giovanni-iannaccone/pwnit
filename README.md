@@ -8,9 +8,26 @@
 ![Number of GitHub contributors](https://img.shields.io/github/contributors/giovanni-iannaccone/pwnit)
 [![Number of GitHub stars](https://img.shields.io/github/stars/giovanni-iannaccone/pwnit)](https://github.com/giovanni-iannaccone/pwnit/stargazers)
 ![Linux](https://img.shields.io/badge/Linux-FCC624?style=flat&logo=linux&logoColor=black)
+![C++](https://img.shields.io/badge/C%2B%2B-00599C?style=flat&logo=cplusplus&logoColor=white)
 
 # ⚡pwnit
 pwnit is a C++ tool built to automate the boring parts of binary exploitation. You give it a binary, a libc, or even a container. It helps you inspect the target, prepare the challenge environment, find useful gadgets, trace function dependencies, and get to the actual exploitation faster. Because spending ten minutes looking for `libc.so.6` inside a Docker image is not what anyone signed up for.
+
+## 🧪 Installation
+1. Clone the repository using git
+```
+git clone https://github.com/giovanni-iannaccone/pwnit
+cd pwnit
+```
+
+2. Run the installation script
+```
+chmod +x install.sh
+./install.sh
+```
+
+> [!WARNING]
+> The compilation process may take some time, as some of the dependencies are fairly large.
 
 ## 🔍 Inspect binaries
 Get the information you usually gather with a handful of different tools, in one place.
@@ -25,7 +42,7 @@ It can inspect things such as:
 - Imported and exported functions
 - Other useful ELF metadata
 
-Informations can also be exported as JSON, making the output easy to consume from scripts or other tools.
+Information can also be exported as JSON, making the output easy to consume from scripts or other tools.
 ```sh
 pwnit check ./chall --symbols --json
 ```
@@ -70,7 +87,7 @@ pwnit rop chall --search "pop rax"
 
 Useful when you already know what you want and don't want to wait around for a gadget finder to finish doing something that should have taken a moment.
 
-# Roadmap
+## Roadmap
 - [ ] Implement xrefs analysis
 - [ ] Add rop gadgets export in json
 - [ ] Support for multiple templates
