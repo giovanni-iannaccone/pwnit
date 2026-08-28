@@ -12,6 +12,8 @@ namespace pwnit::commands
         cmd->add_option("FILE", this->opt.elf, "elf file");
         cmd->add_option("LIBC", this->opt.libc, "libc used by the elf");
         cmd->add_option("LD", this->opt.ld, "loader");
+
+        cmd->add_option("-t,--template", this->opt.template_file, "template file");
         
         cmd->callback([&] () {
             start::start(this->opt);

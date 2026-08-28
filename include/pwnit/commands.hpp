@@ -73,6 +73,7 @@ struct StartOptions {
     std::string elf;
     std::string libc;
     std::string ld;
+    std::string template_file;
 };
 
 class StartCommand

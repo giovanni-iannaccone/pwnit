@@ -90,7 +90,7 @@ Useful when you already know what you want and don't want to wait around for a g
 ## Roadmap
 - [ ] Implement xrefs analysis
 - [ ] Add rop gadgets export in json
-- [ ] Support for multiple templates
+- [X] Support for multiple templates
 
 ## ⚖️ License
 This project is licensed under the GPL-3.0 License. See the LICENSE file for details.

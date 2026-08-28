@@ -17,8 +17,8 @@
 namespace pwnit::templates
 {
 
-constexpr string::fixed elf  = "{} = ELF(\"./{}\", checksec=True)"; 
-constexpr string::fixed libc = "{} = ELF(\"./{}\", checksec=False)";
+constexpr string::fixed elf  = "{} = ELF(\"./{}\", checksec=True)\n"; 
+constexpr string::fixed libc = "{} = ELF(\"./{}\", checksec=False)\n";
 constexpr string::fixed ld   = "{} = ELF(\"./{}\", checksec=False)";
 
 static inline
@@ -31,7 +31,8 @@ std::string ask_solve_file()
     return solve;
 }
 
-template <string::fixed Fmt> constexpr std::string
+template <string::fixed Fmt>
+constexpr std::string
 get_binaries_pwntools_decl(const std::string &varname, const std::filesystem::path &path)
 {
     return std::format("{}", std::format(Fmt, varname, path.filename().string()));
@@ -77,12 +78,15 @@ get_data_for_template(commands::StartOptions &opt)
 static inline
 std::string parse_template(commands::StartOptions &opt)
 {
-    const auto &cfg = config::Config::instance();
-    std::ifstream template_fd {cfg.template_file};
+    std::string template_file = !opt.template_file.empty()
+        ? opt.template_file
+        : [] () {const auto &cfg = config::Config::instance(); return cfg.template_file;} ();
+    
+    std::ifstream template_fd {template_file};
 
     assert::fail(
         template_fd.is_open(),
-        "Could not open template file: {}", cfg.template_file
+        "Could not open template file: {}", template_file
     );
 
     std::string py_template = utils::read_whole_file(template_fd);
