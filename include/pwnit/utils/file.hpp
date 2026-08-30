@@ -19,9 +19,11 @@ void copy_file(const std::string &src, std::string_view dst)
     );
 }
 
-static inline std::optional<std::filesystem::path>
-find_in_filesystem(const std::filesystem::path &root, std::string_view startswith, CheckFunction func)
-{
+static inline
+std::optional<std::filesystem::path>
+find_in_filesystem(
+    const std::filesystem::path &root, std::string_view startswith, CheckFunction func
+) {
     for (const auto& entry: std::filesystem::recursive_directory_iterator(root)) {
         if (func(entry)) continue;
 
@@ -35,9 +37,11 @@ find_in_filesystem(const std::filesystem::path &root, std::string_view startswit
 
 }
 
-inline std::optional<std::filesystem::path>
-find_file(const std::filesystem::path& root, std::string_view startswith)
-{
+inline
+std::optional<std::filesystem::path>
+find_file(
+    const std::filesystem::path& root, std::string_view startswith
+) {
     CheckFunction check_func = [] (const std::filesystem::directory_entry &entry) {
         return !entry.is_regular_file() || entry.is_symlink();
     };
@@ -45,9 +49,11 @@ find_file(const std::filesystem::path& root, std::string_view startswith)
     return find_in_filesystem(root, startswith, check_func);
 }
 
-inline std::optional<std::filesystem::path>
-find_folder(const std::filesystem::path& root, std::string_view startswith)
-{
+inline
+std::optional<std::filesystem::path>
+find_folder(
+    const std::filesystem::path& root, std::string_view startswith
+) {
     CheckFunction check_func = [] (const std::filesystem::directory_entry &entry) {
         return !entry.is_directory();
     };
@@ -58,6 +64,9 @@ find_folder(const std::filesystem::path& root, std::string_view startswith)
 inline
 void give_exec_permission(const std::string &elf)
 {
+    if (!std::filesystem::exists(elf))
+        return;
+    
     std::filesystem::permissions(
         elf,
         std::filesystem::perms::owner_exec,

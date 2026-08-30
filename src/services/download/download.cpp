@@ -18,20 +18,27 @@ constexpr std::string_view launchpad_url = "https://launchpad.net/ubuntu/+archiv
 static
 void copy_ld(const std::string &path)
 {
-    const auto file = utils::find_file(path, "ld-linux");
-    if (!file.has_value()) {
-        console::error("Couldn't find ld in {}", path);
-        return;
-    }
+    auto file = utils::find_file(path, "ld-linux");
+    if (file.has_value()) [[likely]]
+        goto copy_file;
+
+    file = utils::find_file(path, "ld-");
+    if (file.has_value()) [[likely]]
+        goto copy_file;
     
+    console::error("Couldn't find ld in {}", path);
+    return;
+    
+ copy_file:
     utils::copy_file(file.value(), ld_so);
+    return;
 }
 
 static std::optional<std::string>
 find_debug_symbols(const std::string &build_id, const std::string &path)
 {
     const auto folder = utils::find_folder(path, build_id.substr(0, 2));
-    if (!folder.has_value()) {
+    if (!folder.has_value()) [[unlikely]] {
         console::error("Couldn't find valid libc in extracted package");
         return std::nullopt;
     }

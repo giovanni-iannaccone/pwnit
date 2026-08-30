@@ -42,12 +42,8 @@ void update_binaries(commands::StartOptions &opt)
     const auto lib = libc::identify(opt.libc);
     lib.print_debug_info();
     
-    if (need_different_loader(opt)
-        && download_from_libcdb(lib, opt)) {
-        
-        opt.elf = patch::patchelf(opt);
-        console::success("Created {}", opt.elf);
-    }
+    if (need_different_loader(opt))
+        download_from_libcdb(lib, opt);
 }
     
 void start(commands::StartOptions &opt)
@@ -61,10 +57,13 @@ void start(commands::StartOptions &opt)
         goto template_write;
 
     update_binaries(opt);
-    
+
+    opt.elf = patch::patchelf(opt);
+    console::success("Created {}", opt.elf);
+
     utils::give_exec_permission(opt.elf);
     utils::give_exec_permission(opt.ld);
-
+        
 template_write:
     templates::write_solve(opt);
 }
