@@ -12,8 +12,6 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-set(CMAKE_BUILD_TYPE RelWithDebInfo)
-
 include(FetchContent)
 
 set(LIEF_DOC OFF CACHE BOOL "" FORCE)
@@ -35,6 +33,8 @@ FetchContent_Declare(
     GIT_REPOSITORY https://github.com/yhirose/cpp-httplib.git
     GIT_TAG v0.23.0
 )
+
+set(HTTPLIB_USE_ZSTD_IF_AVAILABLE OFF CACHE BOOL "" FORCE)
 
 FetchContent_MakeAvailable(httplib)
 

@@ -15,8 +15,9 @@ namespace pwnit::start
 {
 
 static inline
-bool download_from_libcdb(const libc::Libc &libc, commands::StartOptions &opt)
-{
+bool download_from_libcdb(
+    const libc::Libc &libc, commands::StartOptions &opt
+) {
     const auto [ld_path, libc_path] = download::download(libc);
     
     if (ld_path.empty()) {

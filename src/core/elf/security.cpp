@@ -77,7 +77,7 @@ SecurityMeasures::SecurityMeasures(const LIEF::ELF::Binary &binary)
     );
 
     this->set_statical(
-        binary.interpreter().empty()
+        binary.has_interpreter()
     );
 
     this->set_stripped(

@@ -10,11 +10,8 @@ namespace pwnit::checksec
 static inline
 void handle_json(elf::Elf &e, bool sections, bool symbols)
 {
-    if (sections)
-        e.load_sections();
-
-    if (symbols)
-        e.load_symbols();
+    if (sections) e.load_sections();
+    if (symbols) e.load_symbols();
 
     console::log("{}", e.to_json().dump(4));
 }
@@ -31,6 +28,24 @@ void print_generic_data(const elf::Elf &e)
     console::success("Entry point: {:#x}", e.entry);
 }
 
+static inline
+void print_relro(uint8_t relro)
+{
+    switch (relro) {
+    case elf::RELRO::NONE:
+        console::error("No RELRO");
+        break;
+    case elf::RELRO::PARTIAL:
+        console::warn("Partial RELRO");
+        break;
+    case elf::RELRO::FULL:
+        console::success("Full RELRO");
+        break;
+    default:
+        console::error("WHAT ?");
+    }
+}
+    
 static inline
 void print_elf_sec_measures(const elf::Elf &e)
 {
@@ -49,20 +64,7 @@ void print_elf_sec_measures(const elf::Elf &e)
     else
         console::error("Canary not found");
 
-    switch (e.relro()) {
-    case elf::RELRO::NONE:
-        console::error("No RELRO");
-        break;
-    case elf::RELRO::PARTIAL:
-        console::warn("Partial RELRO");
-        break;
-    case elf::RELRO::FULL:
-        console::success("Full RELRO");
-        break;
-    default:
-        console::error("WHAT ?");
-    }
-
+    print_relro(e.relro());
     console::log("");
 }
 
@@ -109,11 +111,10 @@ void checksec(const commands::CheckOptions &opt)
     
     console::log("[ {} ]\n", opt.file);
 
-    print_generic_data(e);    
+    print_generic_data(e);
     print_elf_sec_measures(e);
     
-    if (opt.sections) print_sections(e);
-    
+    if (opt.sections) print_sections(e);    
     if (opt.symbols) print_symbols(e);
 }
 

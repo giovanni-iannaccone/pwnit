@@ -30,12 +30,12 @@ struct GadgetFilter
 
 struct ScanContext
 {
-    std::span<const uint8_t> content;
-    uint64_t address;
     int depth;
     int max_bytes;
     cs_arch arch;
     cs_mode mode;
+    uint64_t address;
+    std::span<const uint8_t> content;
     const IsEnding &is_ending;
     const GadgetFilter &filter;
 };
@@ -71,7 +71,7 @@ GadgetFilter parse_filter(const std::string &search)
     };
 }
 
-static
+static inline
 bool matches(
     const cs_insn &instruction,
     const GadgetFilter &filter
@@ -86,9 +86,10 @@ bool matches(
            filter.operands == instruction.op_str;
 }
 
-static
-std::string gadget_text(std::span<const cs_insn> instructions)
-{
+static inline
+std::string gadget_text(
+    std::span<const cs_insn> instructions
+) {
     std::string text;
 
     for (const auto &instruction : instructions) {
@@ -106,7 +107,7 @@ std::string gadget_text(std::span<const cs_insn> instructions)
     return text;
 }
 
-static
+static inline
 void print_gadget(
     std::span<const cs_insn> instructions,
     std::unordered_set<std::string> &seen
@@ -173,7 +174,7 @@ void scan_start(
     }
 }
 
-static
+static inline
 Gadgets scan_block(
     const ScanContext &context,
     int begin,
@@ -227,12 +228,12 @@ void gadgets(commands::RopOptions &opt)
     const IsEnding &is_ending = get_is_ending(e.arch);
 
     const ScanContext context{
-        .content = content,
-        .address = section.address,
         .depth = opt.depth,
         .max_bytes = opt.depth * max_instruction_size,
         .arch = e.arch,
         .mode = e.elf_class(),
+        .address = section.address,
+        .content = content,
         .is_ending = is_ending,
         .filter = filter
     };
