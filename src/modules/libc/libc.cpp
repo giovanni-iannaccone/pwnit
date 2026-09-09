@@ -16,7 +16,10 @@ void info(const commands::LibcOptions &opt)
 void unstrip(const commands::LibcOptions &opt)
 {
     libc::Libc lib {opt.file};
+    
     if (download::unstrip_libc(lib))
+        console::success("Successfully unstripped libc");
+    else
         console::error("Couldn't unstrip libc");
 }
     

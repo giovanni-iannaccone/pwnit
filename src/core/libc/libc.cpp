@@ -1,3 +1,4 @@
+#include <format>
 #include <regex>
 
 #include <pwnit/core/config/config.hpp>
@@ -5,7 +6,6 @@
 #include <pwnit/services/system/system.hpp>
 #include <pwnit/utils/console.hpp>
 
-#include <curl/curl.h>
 #include <LIEF/ELF.hpp>
 #include <LIEF/ELF/Binary.hpp>
 
@@ -88,11 +88,25 @@ void Libc::print_debug_info() const noexcept
     );
 }
     
-bool Libc::unstrip(const std::string &symbols) const
+bool Libc::unstrip(const std::string& symbols) const
 {
-    return system::run(
-        "eu-unstrip {} {}", this->soname, symbols
-    ).value() == OK;
+    const auto output = this->soname + ".unstripped";
+
+    if (system::run(
+        "eu-unstrip -o '{}' '{}' '{}'",
+        output, this->soname, symbols
+    ).value() != OK)
+        return false;
+
+    try {
+        std::filesystem::rename(output, this->soname);
+    } catch (const std::filesystem::filesystem_error &e) {
+        console::error("Couldn't replace libc: {}", e.what());
+        std::filesystem::remove(output);
+        return false;
+    }
+
+    return true;
 }
-        
+    
 }

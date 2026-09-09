@@ -1,9 +1,11 @@
 #pragma once
 
+#include <algorithm>
 #include <filesystem>
 #include <fstream>
 #include <functional>
 #include <optional>
+#include <ranges>
 #include <string_view>
 
 namespace pwnit::utils
@@ -34,9 +36,8 @@ find_in_filesystem(
     }
 
     return std::nullopt;
-
 }
-
+    
 inline
 std::optional<std::filesystem::path>
 find_file(
@@ -47,6 +48,40 @@ find_file(
     };
 
     return find_in_filesystem(root, startswith, check_func);
+}
+
+template <typename T>
+static inline bool
+filled(const std::vector<std::optional<T>> &vec) noexcept
+{
+    return !vec.empty() && std::ranges::all_of(vec, [](const auto& x) {
+        return x.has_value();
+    });
+}
+
+using Files = std::vector<std::optional<std::filesystem::path>>;
+    
+inline Files find_files(
+    const std::filesystem::path &root, const std::vector<std::string_view> startswith
+) {
+    Files result;
+    result.resize(startswith.size());
+    
+    for (const auto& entry: std::filesystem::recursive_directory_iterator(root)) {
+        if (!entry.is_regular_file() || entry.is_symlink())
+            continue;
+
+        const auto &name = entry.path().filename().string();
+
+        for (const auto &[i, prefix]: std::views::enumerate(startswith))
+            if (name.starts_with(prefix))
+                result[static_cast<size_t>(i)] = entry.path();
+
+        if (filled(result))
+            return result;
+    }
+
+    return result;
 }
 
 inline

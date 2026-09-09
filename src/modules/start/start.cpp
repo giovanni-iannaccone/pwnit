@@ -66,4 +66,4 @@ template_write:
     templates::write_solve(opt);
 }
 
-}; // namespace pwnit::start
+};
