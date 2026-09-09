@@ -14,7 +14,7 @@ namespace pwnit::container
 
 namespace docker
 {
-    constexpr auto sock = "/var/run/docker.sock";    
+    constexpr auto sock = "/var/run/docker.sock"; 
 
     constexpr std::string get_socket()
     {
@@ -38,6 +38,17 @@ struct ContainerClient
     httplib::Client client;
     const std::string container_id;
 
+    ContainerClient(commands::ContainerType type, const std::string &container_id)
+        : client({
+            std::move((type == commands::ContainerType::DOCKER)
+                ? docker::get_socket()
+                : podman::get_socket())}
+            ),
+          container_id(container_id)
+    {
+        client.set_address_family(AF_UNIX);
+    }
+    
     ContainerClient(const std::string &sock, const std::string &container_id)
         : client({std::move(sock)}),
           container_id(container_id)

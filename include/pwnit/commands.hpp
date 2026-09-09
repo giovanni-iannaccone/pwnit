@@ -54,6 +54,19 @@ public:
     explicit ContainerCommand(CLI::App &app);
 };
 
+struct LibcOptions
+{
+    std::string file;
+};
+
+class LibcCommand
+{
+    LibcOptions opt;
+    
+public:
+    explicit LibcCommand(CLI::App &app);
+};
+
 struct RopOptions {
     bool json;
     int depth;

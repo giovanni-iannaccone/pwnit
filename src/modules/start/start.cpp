@@ -11,23 +11,20 @@
 
 #include <start/start.hpp>
 
-namespace pwnit::start
-{
+namespace pwnit::start {
 
 static inline
 bool download_from_libcdb(
     const libc::Libc &libc, commands::StartOptions &opt
 ) {
-    const auto [ld_path, libc_path] = download::download(libc);
+    const auto &&[ld_path, libc_path] = download::download(libc);
     
-    if (ld_path.empty()) {
-        console::error("Couldn't download libc and ld (launchpad is often down lol)");
+    if (!assert::check(!ld_path.empty(), "Couldn't download libc and ld"))
         return false;
-    }
 
     opt.ld = ld_path;
     opt.libc = libc_path;
-
+    
     return true;
 }
 
@@ -40,7 +37,7 @@ bool need_different_loader(commands::StartOptions &opt)
 static inline
 void update_binaries(commands::StartOptions &opt)
 {
-    const auto lib = libc::identify(opt.libc);
+    const libc::Libc lib {opt.libc};
     lib.print_debug_info();
     
     if (need_different_loader(opt))
@@ -68,5 +65,5 @@ void start(commands::StartOptions &opt)
 template_write:
     templates::write_solve(opt);
 }
-    
-};
+
+}; // namespace pwnit::start

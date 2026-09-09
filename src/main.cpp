@@ -14,6 +14,7 @@ int main(int argc, char **argv)
     AnalysisCommand analysis {app};
     CheckCommand chk {app};
     ContainerCommand container {app};
+    LibcCommand libc {app};
     RopCommand rop {app};
     StartCommand start {app};
     

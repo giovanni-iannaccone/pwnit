@@ -2,6 +2,7 @@
 
 #include <pwnit/core/config/config.hpp>
 #include <pwnit/core/libc/libc.hpp>
+#include <pwnit/services/system/system.hpp>
 #include <pwnit/utils/console.hpp>
 
 #include <curl/curl.h>
@@ -11,16 +12,6 @@
 namespace pwnit::libc
 {
 
-void Libc::print_debug_info() const noexcept
-{
-    console::log("Libc info:");
-    console::log(
-        "soname: {} version: {}\tbuild id: {}\t",
-        std::filesystem::path(this->soname).filename().string(),
-        this->version, this->build_id
-    ); 
-}
-    
 static std::string
 get_build_id(const std::unique_ptr<LIEF::ELF::Binary> &binary)
 {
@@ -43,8 +34,9 @@ get_build_id(const std::unique_ptr<LIEF::ELF::Binary> &binary)
 }
 
 static std::string
-get_version(const std::unique_ptr<LIEF::ELF::Binary>& binary)
-{
+get_version(
+    const std::unique_ptr<LIEF::ELF::Binary>& binary
+) {
     std::string highest;
     int highest_major = -1;
     int highest_minor = -1;
@@ -77,18 +69,30 @@ get_version(const std::unique_ptr<LIEF::ELF::Binary>& binary)
     return highest;
 }
 
-Libc identify(const std::string &path)
+Libc::Libc(const std::string &path)
 {
     const auto binary = LIEF::ELF::Parser::parse(path);
 
-    const std::string build_id = get_build_id(binary);
-    const std::string version = get_version(binary);
-    
-    return Libc {
-        .build_id = build_id,
-        .soname = path,
-        .version = version
-    };
+    this->build_id = get_build_id(binary);
+    this->soname = path;
+    this->version = get_version(binary);
+}
+
+void Libc::print_debug_info() const noexcept
+{
+    console::log("Libc info:");
+    console::log(
+        "soname: {} version: {}\tbuild id: {}\t",
+        std::filesystem::path(this->soname).filename().string(),
+        this->version, this->build_id
+    );
 }
     
+bool Libc::unstrip(const std::string &symbols) const
+{
+    return system::run(
+        "eu-unstrip {} {}", this->soname, symbols
+    ).value() == OK;
+}
+        
 }

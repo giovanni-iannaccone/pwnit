@@ -3,6 +3,10 @@
 #include <format>
 #include <optional>
 
+#define OK 0
+#define PROGRAM_ERROR 1
+#define FORK_ERROR std::nullopt
+
 namespace pwnit::system
 {
 
@@ -15,10 +19,10 @@ std::optional<int> run(
     const int status = std::system(cmd.c_str());
 
     if (status == -1)
-        return std::nullopt;
+        return FORK_ERROR;
 
     if (!WIFEXITED(status))
-        return std::nullopt;
+        return FORK_ERROR;
 
     return WEXITSTATUS(status);
 }

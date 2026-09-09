@@ -78,7 +78,7 @@ bool matches(
 ) {
     if (filter.mnemonic.empty())
         return true;
-
+    
     if (filter.mnemonic != instruction.mnemonic)
         return false;
 

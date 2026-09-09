@@ -71,7 +71,7 @@ Elf::get_symbol(const std::string &name) const
 
     const auto sym = binary.get_symbol(name);
     Symbol symbol {sym};
-
+    
     auto content =
         binary.get_content_from_virtual_address(sym->value(), sym->size());
 

@@ -78,21 +78,9 @@ int find_process_pid(ContainerClient &client, uint16_t port)
         : 0;
 }
 
-static 
-ContainerClient initialize_client(const commands::ContainerOptions &opt)
-{
-    return {
-        (opt.type == commands::ContainerType::DOCKER)
-        	? docker::get_socket()
-        	: podman::get_socket(),
-        opt.container_id
-    };
-}
-
 void extract(const commands::ContainerOptions &opt)
 {
-    ContainerClient client = initialize_client(opt);
-
+    ContainerClient client {opt.type, opt.container_id};
     int pid = find_process_pid(client, opt.port);
 
     const auto && [libc, ld] =
