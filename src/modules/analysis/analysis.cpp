@@ -1,7 +1,7 @@
 #include <optional>
 #include <string_view>
-#include <unordered_map>
 
+#include <pwnit/core/arch/arch.hpp>
 #include <pwnit/core/config/config.hpp>
 #include <pwnit/core/elf/elf.hpp>
 #include <pwnit/services/disassembler/disassembler.hpp>
@@ -18,13 +18,16 @@ namespace pwnit::analysis
 
 struct AnalysisContext
 {
+    elf::PLT plt;
     elf::Symbol sym;
     elf::Arch arch;
     cs_mode mode;
 };
+
+using Code = std::span<const uint8_t>;
     
 static std::optional<std::string_view>
-is_dangerous(const PLT &plt, const cs_detail *detail)
+is_dangerous(const elf::PLT &plt, const cs_detail *detail)
 {
     const auto func = plt[detail];
     const auto functions = config::Config::instance().dangerous_functions;
@@ -36,7 +39,7 @@ is_dangerous(const PLT &plt, const cs_detail *detail)
     return std::nullopt;
 }
 
-void print_if_dangerous(const PLT &plt, const cs_insn &instr)
+void print_if_dangerous(const elf::PLT &plt, const cs_insn &instr)
 {
     const auto func = is_dangerous(plt, instr.detail);
     if (func.has_value())
@@ -44,18 +47,17 @@ void print_if_dangerous(const PLT &plt, const cs_insn &instr)
 }
     
 static void check_dangerous_function(
-    const PLT &plt, const AnalysisContext &ctx,
-    const std::span<const uint8_t> &code
+    const AnalysisContext &ctx, const Code &code
 ) {
     const auto asmb =
         disassembler::disass(code, ctx.sym.address, ctx.arch, ctx.mode);
 
-    const auto is_call = disassembler::get_is_call(ctx.arch);
+    const auto is_call = arch::get_is_call(ctx.arch);
     console::info("xrefs for {}", ctx.sym.name);
 
     for (const auto &instr : asmb)
         if (is_call(instr))
-            print_if_dangerous(plt, instr);
+            print_if_dangerous(ctx.plt, instr);
 }
 
 void analyze(commands::AnalysisOptions &opt)
@@ -64,17 +66,15 @@ void analyze(commands::AnalysisOptions &opt)
     assert::fail(
         !e.stripped(), "Functionality still not supported for stripped binaries"
     );
-    
-    const PLT plt {e};
-    
+        
     for (const auto &sym: e.load_symbols()) {
         const auto && [_, content] = e.get_symbol(sym.name);
 
         const AnalysisContext ctx {
-            sym, e.arch, e.elf_class()
+            e.get_plt(), sym, e.arch, e.elf_class()
         };
         
-        check_dangerous_function(plt, ctx, content);
+        check_dangerous_function(ctx, content);
     }
 }
     
