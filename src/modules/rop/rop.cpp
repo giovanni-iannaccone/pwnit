@@ -1,3 +1,4 @@
+#include "pwnit/core/arch/arch.hpp"
 #include <algorithm>
 #include <cstdint>
 #include <format>
@@ -15,7 +16,6 @@
 #include <pwnit/utils/console.hpp>
 
 #include <rop/rop.hpp>
-#include <rop/utils.hpp>
 
 #include <BS_thread_pool.hpp>
 
@@ -36,7 +36,7 @@ struct ScanContext
     cs_mode mode;
     uint64_t address;
     std::span<const uint8_t> content;
-    const IsEnding &is_ending;
+    const arch::IsEnding &is_ending;
     const GadgetFilter &filter;
 };
 
@@ -197,20 +197,18 @@ void scan(const ScanContext &context)
     Gadgets results;
 
     pool.detach_blocks(
-        0,
-        static_cast<int>(context.content.size()),
+        0, static_cast<int>(context.content.size()),
         [&](int begin, int end) {
             auto local = scan_block(context, begin, end);
-
+            
             std::lock_guard lock(mutex);
-
+            
             for (auto &gadget : local)
                 results.push_back(std::move(gadget));
         }
     );
-
+    
     pool.wait();
-
     std::unordered_set<std::string> seen;
 
     for (const auto &gadget : results)
@@ -223,11 +221,11 @@ void gadgets(commands::RopOptions &opt)
     const auto &[section, content] = e.get_section(".text");
 
     constexpr int max_instruction_size = 15;
-
     const GadgetFilter filter = parse_filter(opt.search);
-    const IsEnding &is_ending = get_is_ending(e.arch);
 
-    const ScanContext context{
+    const arch::IsEnding &is_ending = arch::get_is_ending(e.arch);
+
+    const ScanContext context {
         .depth = opt.depth,
         .max_bytes = opt.depth * max_instruction_size,
         .arch = e.arch,

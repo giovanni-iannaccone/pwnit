@@ -1,41 +1,12 @@
-#pragma once
-
-#include <cctype>
 #include <string_view>
 
+#include <pwnit/core/arch/arch.hpp>
 #include <pwnit/utils/assert.hpp>
 
 #include <capstone/capstone.h>
 
-namespace pwnit::rop
+namespace pwnit::arch
 {
-
-using IsEnding = bool (*)(const cs_insn&);
-
-static
-bool mnemonic_is(
-    const cs_insn &instr,
-    std::string_view mnemonic
-)
-{
-    std::string_view current {instr.mnemonic};
-
-    if (current.size() != mnemonic.size())
-        return false;
-
-    for (size_t i = 0; i < current.size(); ++i) {
-        const auto a =
-            static_cast<unsigned char>(current[i]);
-
-        const auto b =
-            static_cast<unsigned char>(mnemonic[i]);
-
-        if (std::tolower(a) != std::tolower(b))
-            return false;
-    }
-
-    return true;
-}
 
 static
 bool is_x86_ending(const cs_insn &instr)
@@ -77,15 +48,12 @@ bool is_arm_ending(const cs_insn &instr)
         return true;
 
     if (mnemonic_is(instr, "mov")) {
-
         std::string_view op {instr.op_str};
-
         if (op == "pc, lr")
             return true;
     }
 
     if (mnemonic_is(instr, "pop")) {
-
         std::string_view op {instr.op_str};
 
         if (op.find("pc") != std::string_view::npos)
@@ -130,7 +98,6 @@ static
 bool is_mips_ending(const cs_insn &instr)
 {
     if (mnemonic_is(instr, "jr")) {
-
         std::string_view op {instr.op_str};
 
         if (op.find("$ra") != std::string_view::npos ||
@@ -205,13 +172,8 @@ bool is_riscv_ending(const cs_insn &instr)
         return true;
 
     if (mnemonic_is(instr, "jalr")) {
-
         std::string_view op {instr.op_str};
-
-        if (op.find("ra") != std::string_view::npos)
-            return true;
-
-        return true;
+        return op.find("ra") != std::string_view::npos;
     }
 
     if (mnemonic_is(instr, "j") ||
@@ -242,7 +204,6 @@ bool is_generic_ending(const cs_insn &instr)
     return false;
 }
 
-static
 IsEnding get_is_ending(cs_arch arch)
 {
     switch (arch) {

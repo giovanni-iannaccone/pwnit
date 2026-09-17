@@ -48,6 +48,22 @@ cs_mode Elf::elf_class() const
 
     return CS_MODE_64;
 }
+
+PLT Elf::get_plt()
+{
+    PLT plt;
+    const auto &binary = *this->impl->binary;
+    
+    for (const LIEF::ELF::Relocation& reloc : binary.dynamic_relocations()) {
+        if (!reloc.has_symbol())
+            continue;
+        
+        const LIEF::ELF::Symbol* symbol = reloc.symbol();
+        plt.plt[reloc.address()] = symbol->name();
+    }
+
+    return plt;
+}
     
 std::pair<Section, const std::span<const uint8_t>>
 Elf::get_section(const std::string &name) const

@@ -9,9 +9,11 @@
 
 namespace pwnit::disassembler
 {        
-    std::vector<cs_insn>
-    disass(
-        const std::span<const uint8_t> &content,
-        uint64_t address, cs_arch arch, cs_mode mode
-    );
+        
+std::vector<cs_insn>
+disass(
+    const std::span<const uint8_t> &content,
+    uint64_t address, cs_arch arch, cs_mode mode
+);
+    
 }

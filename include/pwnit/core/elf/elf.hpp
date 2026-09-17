@@ -42,7 +42,30 @@ struct Arch
     operator cs_arch() const;    
     const char *to_string() const;
 };
+
+struct PLT
+{
+    std::unordered_map<uint64_t, std::string> plt;
     
+    const std::string&
+    operator[](uint64_t addr) const noexcept
+    {
+        auto it = plt.find(addr);
+
+        if (it != plt.end())
+            return it->second;
+
+        static const std::string empty;
+        return empty;
+    }
+
+    const std::string&
+    operator[](const cs_detail *detail) const noexcept
+    {
+        return (*this)[static_cast<uint64_t>(0)];
+    }
+};
+
 struct Section
 {
     std::string name;
@@ -170,13 +193,15 @@ public:
 
     std::pair<Symbol, const std::span<const uint8_t>>
     get_symbol(const std::string &name) const;
-
+    
     cs_mode elf_class() const;
     
     bool is_libc() const;
     bool is_loader() const;
-
+    
     const std::string interpreter() const noexcept;
+
+    PLT get_plt();
     
     uint8_t canary() const noexcept
     {
