@@ -1,7 +1,6 @@
 from pwn import *
 
 {{ binaries }}
-
 context.binary = {{ elf_var }}
 
 HOST = "addr"

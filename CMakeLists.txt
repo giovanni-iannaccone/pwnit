@@ -105,13 +105,13 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(cli11)
 
 FetchContent_Declare(
-    spdlog
-    GIT_REPOSITORY https://github.com/gabime/spdlog.git
-    GIT_TAG v1.17.0
+    fmt
+    GIT_REPOSITORY https://github.com/fmtlib/fmt.git
+    GIT_TAG 10.2.1
     GIT_SHALLOW TRUE
 )
 
-FetchContent_MakeAvailable(spdlog)
+FetchContent_MakeAvailable(fmt)
 
 file(GLOB_RECURSE SOURCES
     CONFIGURE_DEPENDS
@@ -137,7 +137,7 @@ target_link_libraries(pwnit
         httplib::httplib
         tomlplusplus::tomlplusplus
         nlohmann_json::nlohmann_json
-        spdlog::spdlog
+        fmt::fmt        
 )
 
 target_compile_features(pwnit

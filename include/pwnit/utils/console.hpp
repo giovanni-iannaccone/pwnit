@@ -1,10 +1,15 @@
 #pragma once
 
+#include <chrono>
+#include <ctime>
+#include <iomanip>
+#include <iostream>
+#include <fmt/format.h>
+#include <mutex>
 #include <string>
+#include <string_view>
+#include <sstream>
 #include <utility>
-
-#include <spdlog/spdlog.h>
-#include <spdlog/sinks/stdout_color_sinks.h>
 
 namespace pwnit::console
 {
@@ -12,184 +17,164 @@ namespace pwnit::console
 namespace detail
 {
 
-inline spdlog::logger &logger(const char *name)
+inline constexpr std::string_view reset   = "\033[0m";
+inline constexpr std::string_view cyan    = "\033[36m";
+inline constexpr std::string_view green   = "\033[32m";
+inline constexpr std::string_view yellow  = "\033[33m";
+inline constexpr std::string_view red     = "\033[31m";
+inline constexpr std::string_view magenta = "\033[35m";
+
+inline std::mutex &mutex()
 {
-    if (auto logger = spdlog::get(name))
-        return *logger;
-
-    return *spdlog::stdout_color_mt(name);
+    static std::mutex m;
+    return m;
 }
 
-inline spdlog::logger &debug_logger()
+inline std::string timestamp()
 {
-    static auto &logger = detail::logger("pwnit.debug");
+    auto now = std::chrono::system_clock::now();
+    auto t = std::chrono::system_clock::to_time_t(now);
 
-    static const bool init = [] {
-        logger.set_pattern("[%H:%M:%S] [%^d%$] %v");
-        logger.set_level(spdlog::level::trace);
-        return true;
-    }();
+    std::tm tm{};
 
-    (void)init;
-    return logger;
+#ifdef _WIN32
+    localtime_s(&tm, &t);
+#else
+    localtime_r(&t, &tm);
+#endif
+
+    std::ostringstream out;
+    out << std::put_time(&tm, "%H:%M:%S");
+
+    return out.str();
 }
 
-inline spdlog::logger &info_logger()
+inline void write(std::string_view text)
 {
-    static auto &logger = detail::logger("pwnit.info");
+    std::lock_guard<std::mutex> lock(mutex());
 
-    static const bool init = [] {
-        logger.set_pattern("[%^i%$] %v");
-        logger.set_level(spdlog::level::trace);
-        return true;
-    }();
+    std::cout.write(
+        text.data(),
+        static_cast<std::streamsize>(text.size())
+    );
 
-    (void)init;
-    return logger;
+    std::cout.flush();
 }
 
-inline spdlog::logger &error_logger()
+inline void colored(
+    std::string_view color,
+    std::string_view text
+)
 {
-    static auto &logger = detail::logger("pwnit.error");
+    std::string output;
 
-    static const bool init = [] {
-        logger.set_pattern("%^%v%$");
-        logger.set_level(spdlog::level::trace);
-        return true;
-    }();
+    output.reserve(
+        color.size() +
+        text.size() +
+        reset.size() + 1
+    );
 
-    (void)init;
-    return logger;
-}
+    output.append(color);
+    output.append(text);
+    output.append(reset);
+    output.push_back('\n');
 
-inline spdlog::logger &warn_logger()
-{
-    static auto &logger = detail::logger("pwnit.warn");
-
-    static const bool init = [] {
-        logger.set_pattern("%^%v%$");
-        logger.set_level(spdlog::level::trace);
-        return true;
-    }();
-
-    (void)init;
-    return logger;
-}
-
-inline spdlog::logger &success_logger()
-{
-    static auto &logger = detail::logger("pwnit.success");
-
-    static const bool init = [] {
-        logger.set_pattern("%^%v%$");
-        logger.set_level(spdlog::level::trace);
-        return true;
-    }();
-
-    (void)init;
-    return logger;
-}
-
-inline spdlog::logger &plain_logger()
-{
-    static auto &logger = detail::logger("pwnit.plain");
-
-    static const bool init = [] {
-        logger.set_pattern("%v");
-        logger.set_level(spdlog::level::trace);
-        return true;
-    }();
-
-    (void)init;
-    return logger;
+    write(output);
 }
 
 }
 
-template <typename ...Args>
+template<typename... Args>
 inline void debug(
-    spdlog::format_string_t<Args...> fmt,
-    Args &&...args
-) {
-    SPDLOG_LOGGER_DEBUG(
-        &detail::debug_logger(),
-        fmt,
-        std::forward<Args>(args)...
+    fmt::format_string<Args...> fmt,
+    Args&&... args
+)
+{
+    detail::colored(
+        detail::cyan,
+        fmt::format(
+            "[{}] [d] {}",
+            detail::timestamp(),
+            fmt::format(fmt, std::forward<Args>(args)...)
+        )
     );
 }
 
-template <typename ...Args>
+template<typename... Args>
 inline void info(
-    spdlog::format_string_t<Args...> fmt,
-    Args &&...args
-) {
-    SPDLOG_LOGGER_INFO(
-        &detail::info_logger(),
-        fmt,
-        std::forward<Args>(args)...
-    );
-}
-
-template <typename ...Args>
-inline void error(
-    spdlog::format_string_t<Args...> fmt,
-    Args &&...args
-) {
-    SPDLOG_LOGGER_ERROR(
-        &detail::error_logger(),
-        fmt,
-        std::forward<Args>(args)...
-    );
-}
-
-template <typename ...Args>
-inline void warn(
-    spdlog::format_string_t<Args...> fmt,
-    Args &&...args
-) {
-    SPDLOG_LOGGER_WARN(
-        &detail::warn_logger(),
-        fmt,
-        std::forward<Args>(args)...
-    );
-}
-
-template <typename ...Args>
-inline void success(
-    spdlog::format_string_t<Args...> fmt,
-    Args &&...args
-) {
-    SPDLOG_LOGGER_INFO(
-        &detail::success_logger(),
-        fmt,
-        std::forward<Args>(args)...
-    );
-}
-
-template <typename ...Args>
-inline void log(
-    spdlog::format_string_t<Args...> fmt,
-    Args &&...args
-) {
-    SPDLOG_LOGGER_INFO(
-        &detail::plain_logger(),
-        fmt,
-        std::forward<Args>(args)...
-    );
-}
-
-template <typename ...Args>
-inline void message(
-    const std::string &header,
-    spdlog::format_string_t<Args...> fmt,
-    Args &&...args
-) {
-    auto &logger = detail::logger(header.c_str());
-    logger.set_pattern("%^%n%$ %v");
-
-    logger.info(
+    fmt::format_string<Args...> fmt,
+    Args&&... args
+)
+{
+    detail::colored(
+        detail::green,
         fmt::format(fmt, std::forward<Args>(args)...)
     );
+}
+
+template<typename... Args>
+inline void success(
+    fmt::format_string<Args...> fmt,
+    Args&&... args
+)
+{
+    detail::colored(
+        detail::green,
+        fmt::format(fmt, std::forward<Args>(args)...)
+    );
+}
+
+template<typename... Args>
+inline void warn(
+    fmt::format_string<Args...> fmt,
+    Args&&... args
+)
+{
+    detail::colored(
+        detail::yellow,
+        fmt::format(fmt, std::forward<Args>(args)...)
+    );
+}
+
+template<typename... Args>
+inline void log(
+    fmt::format_string<Args...> fmt,
+    Args&&... args
+)
+{
+    detail::write(
+        fmt::format(fmt, std::forward<Args>(args)...) + "\n"
+    );
+}
+template<typename... Args>
+inline void error(
+    fmt::format_string<Args...> fmt,
+    Args&&... args
+)
+{
+    detail::colored(
+        detail::red,
+        fmt::format(fmt, std::forward<Args>(args)...)
+    );
+}
+
+template<typename... Args>
+inline void message(
+    const std::string& header,
+    fmt::format_string<Args...> fmt,
+    Args&&... args
+)
+{
+    std::string output;
+
+    output += detail::green;
+    output += header;
+    output += detail::reset;
+    output += " ";
+    output += fmt::format(fmt, std::forward<Args>(args)...);
+    output += "\n";
+
+    detail::write(output);
 }
 
 }
